@@ -1,0 +1,27 @@
+Options -Indexes
+
+# ─── Activar mod_rewrite ──────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /contafc/
+
+    # Evitar reescribir archivos/directorios que sí existen
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Todo lo demás va a index.php
+    RewriteRule ^(.*)$ index.php?_url=$1 [QSA,L]
+</IfModule>
+
+# ─── Headers de seguridad ─────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# ─── PHP ──────────────────────────────────────────────────────────────────
+<IfModule mod_php.c>
+    php_value date.timezone "America/Bogota"
+    php_value display_errors Off
+    php_value log_errors On
+</IfModule>

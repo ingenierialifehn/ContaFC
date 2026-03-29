@@ -1,0 +1,92 @@
+version: '3.9'
+
+services:
+  # ─── MySQL 8.0 ───────────────────────────────────────────────────────────────
+  contafc_db:
+    image: mysql:8.0
+    container_name: contafc_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-R00tS3cur3!}
+      MYSQL_DATABASE: ${DB_NAME:-contafc}
+      MYSQL_USER: ${DB_USER:-contafc_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-C0nt4FC!2026}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "3307:3306"
+    networks:
+      - contafc_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-R00tS3cur3!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ─── PHP 8.5 FPM ─────────────────────────────────────────────────────────────
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: contafc_php
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html/contafc:rw
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      DB_HOST: contafc_db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-contafc}
+      DB_USER: ${DB_USER:-contafc_user}
+      DB_PASSWORD: ${DB_PASSWORD:-C0nt4FC!2026}
+      APP_ENV: ${APP_ENV:-development}
+      APP_SECRET: ${APP_SECRET:-ch4ng3m3_pr0duct10n_s3cr3t_k3y}
+      APP_TIMEZONE: America/Tegucigalpa
+    depends_on:
+      contafc_db:
+        condition: service_healthy
+    networks:
+      - contafc_net
+
+  # ─── Nginx ───────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: contafc_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html/contafc:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - contafc_net
+
+  # ─── phpMyAdmin ──────────────────────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: contafc_pma
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: contafc_db
+      PMA_USER: ${DB_USER:-contafc_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-C0nt4FC!2026}
+      UPLOAD_LIMIT: 300M
+    depends_on:
+      contafc_db:
+        condition: service_healthy
+    networks:
+      - contafc_net
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  contafc_net:
+    driver: bridge

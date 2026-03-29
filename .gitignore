@@ -1,0 +1,8 @@
+.env
+*.gdb
+*.fdb
+/src/vendor/
+/db_data/
+*.log
+.DS_Store
+Thumbs.db
