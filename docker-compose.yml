@@ -20,12 +20,34 @@ services:
     networks:
       - contafc_net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-R00tS3cur3!}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-R00tS3cur3!}" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  # ─── PHP 8.5 FPM ─────────────────────────────────────────────────────────────
+  # ─── Firebird 3.0 (Corregido para Red y Acceso) ──────────────────────────────
+  firebird:
+    image: jacobalberty/firebird:v3.0
+    container_name: contafc_firebird
+    restart: unless-stopped
+    environment:
+      - ISC_PASSWORD=masterkey
+      - FIREBIRD_DATABASE=dummy.fdb
+      - FIREBIRD_USER=contafc
+      - FIREBIRD_PASSWORD=masterkey
+      # Permite a Firebird abrir archivos en la carpeta /databases
+      - FIREBIRD_DATABASE_ACCESS=Full
+      # Obliga al servidor a escuchar peticiones de red externas al contenedor
+      - RemoteBindAddress=0.0.0.0
+    volumes:
+      - ./tmp:/databases
+      - firebird_data:/firebird/data
+    ports:
+      - "3050:3050"
+    networks:
+      - contafc_net
+
+  # ─── PHP 8.4 FPM ─────────────────────────────────────────────────────────────
   php:
     build:
       context: ./docker/php
@@ -34,6 +56,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./:/var/www/html/contafc:rw
+      - ./tmp:/databases
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     environment:
       DB_HOST: contafc_db
@@ -41,6 +64,10 @@ services:
       DB_NAME: ${DB_NAME:-contafc}
       DB_USER: ${DB_USER:-contafc_user}
       DB_PASSWORD: ${DB_PASSWORD:-C0nt4FC!2026}
+      # Host debe coincidir con el nombre del servicio 'firebird'
+      FIREBIRD_HOST: firebird
+      FIREBIRD_PORT: 3050
+      FIREBIRD_PASSWORD: masterkey
       APP_ENV: ${APP_ENV:-development}
       APP_SECRET: ${APP_SECRET:-ch4ng3m3_pr0duct10n_s3cr3t_k3y}
       APP_TIMEZONE: America/Tegucigalpa
@@ -56,7 +83,7 @@ services:
     container_name: contafc_nginx
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8082:80"
     volumes:
       - ./:/var/www/html/contafc:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -71,7 +98,7 @@ services:
     container_name: contafc_pma
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "8083:80"
     environment:
       PMA_HOST: contafc_db
       PMA_USER: ${DB_USER:-contafc_user}
@@ -85,6 +112,8 @@ services:
 
 volumes:
   db_data:
+    driver: local
+  firebird_data:
     driver: local
 
 networks:

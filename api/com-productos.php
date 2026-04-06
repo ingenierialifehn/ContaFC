@@ -39,12 +39,6 @@ try {
     elseif ($method === 'PUT') {
         $body = json_decode(file_get_contents('php://input'), true);
         $stmt = $db->prepare(
-            "UPDATE com_productos SET codigoTarget = :cod, nombre = :nom, tipo = :tip, precio_venta = :pv, 
-             tasa_isv = :tiv, maneja_inventario = :mi, maneja_lotes = :ml 
-             WHERE id = :id AND empresa_id = :eid"
-        );
-        // Nota: codigoTarget -> codigo en la tabla Real. Corregiremos el typo si lo hubiera.
-        $stmt = $db->prepare(
             "UPDATE com_productos SET codigo = :cod, nombre = :nom, tipo = :tip, precio_venta = :pv, 
              tasa_isv = :tiv, maneja_inventario = :mi, maneja_lotes = :ml 
              WHERE id = :id AND empresa_id = :eid"
@@ -60,6 +54,13 @@ try {
             ':id'  => (int)$body['id'],
             ':eid' => $eid
         ]);
+        echo json_encode(['success' => true]);
+    }
+    elseif ($method === 'DELETE') {
+        $id = (int)($_GET['id'] ?? 0);
+        if (!$id) throw new Exception("ID inválido");
+        $stmt = $db->prepare("UPDATE com_productos SET activo = 0 WHERE id = :id AND empresa_id = :eid");
+        $stmt->execute([':id' => $id, ':eid' => $eid]);
         echo json_encode(['success' => true]);
     }
 } catch (Throwable $e) {

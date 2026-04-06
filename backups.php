@@ -65,7 +65,49 @@ $activeNav = 'backups';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-4xl mx-auto">
+        <div class="w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Backup Settings -->
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Configuración Automática</span>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Frecuencia</label>
+                                <select id="set_frecuencia" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-honduras/20 outline-none transition">
+                                    <option value="desactivado">Desactivado</option>
+                                    <option value="diaria">Diaria</option>
+                                    <option value="semanal">Semanal</option>
+                                    <option value="mensual">Mensual</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Hora Ejecución</label>
+                                <input type="time" id="set_hora" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-honduras/20 outline-none transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Notificar al Correo (Opcional)</label>
+                            <input type="email" id="set_email" placeholder="ejemplo@correo.com" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-honduras/20 outline-none transition uppercase">
+                        </div>
+                        <button onclick="guardarConfiguracion()" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black transition shadow-lg shadow-black/10">
+                            Guardar Configuración
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="p-8 bg-honduras/5 rounded-3xl border border-honduras/10 flex flex-col justify-center">
+                    <div class="w-14 h-14 rounded-2xl bg-honduras text-white flex items-center justify-center mb-6 shadow-xl shadow-honduras/20">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight mb-2">Backups Inteligentes</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed">ContaFC puede generar copias de seguridad de forma silenciosa. Una vez configurada la frecuencia, el sistema mantendrá sus datos a salvo sin intervención manual.</p>
+                </div>
+            </div>
+
             <div class="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Historial de Respaldos</span>
@@ -113,7 +155,46 @@ $activeNav = 'backups';
 </main>
 
 <script>
-document.addEventListener('DOMContentLoaded', cargarRespaldos);
+document.addEventListener('DOMContentLoaded', () => {
+    cargarRespaldos();
+    cargarConfiguracion();
+});
+
+async function cargarConfiguracion() {
+    try {
+        const res = await fetch('<?= BASE_URL ?>/api/backups.php?settings=1');
+        const json = await res.json();
+        if (json.data) {
+            document.getElementById('set_frecuencia').value = json.data.frecuencia || 'desactivado';
+            document.getElementById('set_hora').value = json.data.hora || '00:00';
+            document.getElementById('set_email').value = json.data.notificar_email || '';
+        }
+    } catch (err) { console.error('Error al cargar config:', err); }
+}
+
+async function guardarConfiguracion() {
+    const data = {
+        frecuencia: document.getElementById('set_frecuencia').value,
+        hora: document.getElementById('set_hora').value,
+        notificar_email: document.getElementById('set_email').value
+    };
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>/api/backups.php?settings=1', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        if (res.ok) {
+            Swal.fire({ icon:'success', title:'Configuración Guardada', timer:1500, showConfirmButton:false });
+        } else {
+            throw new Error(json.error || 'No se pudo guardar');
+        }
+    } catch (err) {
+        Swal.fire({ icon:'error', title:'Error', text: err.message });
+    }
+}
 
 async function cargarRespaldos() {
     const list = document.getElementById('backups-body');

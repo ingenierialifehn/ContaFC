@@ -151,16 +151,27 @@ async function cargar() {
 function render(data) {
     const grid = document.getElementById('productos-grid');
     if (data.length === 0) {
-        grid.innerHTML = '<div class="col-span-full py-20 text-center opacity-30 font-black uppercase text-xl tracking-widest italic">Cero resultados comerciales...</div>';
+        grid.innerHTML = '<div class="col-span-full py-20 text-center opacity-30 font-black uppercase text-xl tracking-widest italic">Sin productos registrados...</div>';
         return;
     }
     grid.innerHTML = data.map(p => `
-        <div class="product-card bg-white rounded-[2rem] p-7 border border-slate-200 flex flex-col group cursor-pointer" onclick='abrirEditar(${JSON.stringify(p)})'>
+        <div class="product-card bg-white rounded-[2.5rem] p-7 border border-slate-200 flex flex-col group relative">
+            <!-- Botón Eliminar: Ubicado en la esquina superior izquierda, máximo alejamiento del botón editar -->
+            <button onclick='eliminarProducto(${p.id})' title="Eliminar Ítem" 
+                    class="absolute -top-2 -left-2 w-10 h-10 bg-white border border-slate-100 text-slate-300 hover:text-white hover:bg-red-500 hover:border-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl z-20">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+
             <div class="flex items-start justify-between mb-4">
                 <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-honduras transition-colors">
                     ${p.tipo === 'servicio' ? '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' : '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>'}
                 </div>
-                <span class="text-[9px] font-black uppercase text-slate-400 border border-slate-100 px-3 py-1 rounded-full group-hover:border-honduras transition-colors">${p.codigo}</span>
+                <div class="flex gap-2">
+                    <button onclick='abrirEditar(${JSON.stringify(p)})' title="Editar" class="p-2 bg-slate-50 text-slate-400 hover:bg-honduras hover:text-white rounded-lg transition shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <span class="text-[9px] font-black uppercase text-slate-400 border border-slate-100 flex items-center px-3 rounded-full group-hover:border-honduras transition-colors">${p.codigo}</span>
+                </div>
             </div>
             <h4 class="font-black text-slate-800 text-base leading-tight mb-2 uppercase tracking-tighter">${p.nombre}</h4>
             <div class="mt-auto pt-6 flex items-end justify-between border-t border-slate-50 italic">
@@ -204,6 +215,29 @@ function abrirEditar(p) {
     modal.classList.remove('hidden');
 }
 
+async function eliminarProducto(id) {
+    const result = await Swal.fire({
+        title: '¿Está seguro?',
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar!',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        const res = await fetch(`api/com-productos.php?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            Swal.fire({ icon: 'success', title: 'Eliminado!', text: 'El ítem ha sido desactivado.', confirmButtonColor: '#0073cf' });
+            cargar();
+        } else {
+            Swal.fire('Error', 'No se pudo eliminar el ítem.', 'error');
+        }
+    }
+}
+
 function cerrar() { modal.classList.add('hidden'); }
 
 document.getElementById('form-producto').addEventListener('submit', async (e) => {
@@ -227,7 +261,7 @@ document.getElementById('form-producto').addEventListener('submit', async (e) =>
     });
 
     if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'Excelente!', text: 'Ítem guardado con éxito.', background: '#fff', confirmButtonColor: '#0073cf' });
+        Swal.fire({ icon: 'success', title: 'Excelente!', text: 'Ítem procesado con éxito.', background: '#fff', confirmButtonColor: '#0073cf' });
         cerrar();
         cargar();
     } else {

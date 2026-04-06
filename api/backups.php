@@ -19,6 +19,25 @@ if (!is_dir($backupDir)) {
 
 try {
     if ($method === 'GET') {
+        if (isset($_GET['settings'])) {
+            $pdo = Database::getInstance()->getPdo();
+            $pdo->exec("CREATE TABLE IF NOT EXISTS config_backups (
+                empresa_id INT NOT NULL,
+                frecuencia VARCHAR(20) NOT NULL DEFAULT 'desactivado',
+                hora VARCHAR(5) NOT NULL DEFAULT '00:00',
+                notificar_email VARCHAR(100) NULL,
+                ultimo_backup DATETIME NULL,
+                PRIMARY KEY (empresa_id)
+            )");
+            // Ensure ultimo_backup exists if the table was created recently without it
+            try { $pdo->exec("ALTER TABLE config_backups ADD COLUMN ultimo_backup DATETIME NULL"); } catch (Throwable $e) {}
+            $stmt = $pdo->prepare("SELECT * FROM config_backups WHERE empresa_id = ?");
+            $stmt->execute([Auth::empresaId()]);
+            $config = $stmt->fetch();
+            echo json_encode(['data' => $config ?: ['frecuencia' => 'desactivado', 'hora' => '00:00']]);
+            exit;
+        }
+
         if (isset($_GET['download'])) {
             $file = basename($_GET['download']);
             $path = $backupDir . '/' . $file;
@@ -43,17 +62,50 @@ try {
         echo json_encode(['data' => $data]);
     } 
     elseif ($method === 'POST') {
-        $dbHost = $_ENV['DB_HOST'] ?? 'db';
-        $dbName = $_ENV['DB_NAME'] ?? 'contafc';
-        $dbUser = $_ENV['DB_USER'] ?? 'contafc_user';
-        $dbPass = $_ENV['DB_PASSWORD'] ?? '';
+        if (isset($_GET['settings'])) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $pdo = Database::getInstance()->getPdo();
+            $pdo->exec("CREATE TABLE IF NOT EXISTS config_backups (
+                empresa_id INT NOT NULL,
+                frecuencia VARCHAR(20) NOT NULL DEFAULT 'desactivado',
+                hora VARCHAR(5) NOT NULL DEFAULT '00:00',
+                notificar_email VARCHAR(100) NULL,
+                ultimo_backup DATETIME NULL,
+                PRIMARY KEY (empresa_id)
+            )");
+            // Ensure ultimo_backup exists if the table was created recently without it
+            try { $pdo->exec("ALTER TABLE config_backups ADD COLUMN ultimo_backup DATETIME NULL"); } catch (Throwable $e) {}
+            $stmt = $pdo->prepare("INSERT INTO config_backups (empresa_id, frecuencia, hora, notificar_email) 
+                                   VALUES (?, ?, ?, ?)
+                                   ON DUPLICATE KEY UPDATE frecuencia = VALUES(frecuencia), hora = VALUES(hora), notificar_email = VALUES(notificar_email)");
+            $stmt->execute([
+                Auth::empresaId(),
+                $input['frecuencia'],
+                $input['hora'],
+                $input['notificar_email'] ?? null
+            ]);
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        $dbHost = defined('DB_HOST') ? DB_HOST : (getenv('DB_HOST') ?: 'contafc_db');
+        $dbName = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: 'contafc');
+        $dbUser = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: 'contafc_user');
+        $dbPass = defined('DB_PASSWORD') ? DB_PASSWORD : (getenv('DB_PASSWORD') ?: '');
         
         $filename = 'backup_' . date('Ymd_His') . '.sql';
         $path = $backupDir . '/' . $filename;
         
-        // Comando mysqldump para Docker (el mysql-client debe estar en el contenedor PHP)
+        $mysqldumpPath = 'mysqldump';
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            if (file_exists('C:\\xampp\\mysql\\bin\\mysqldump.exe')) {
+                $mysqldumpPath = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
+            }
+        }
+        
         $cmd = sprintf(
-            'mysqldump -h %s -u %s --password=%s %s > %s 2>&1',
+            '%s -h %s -u %s --password=%s %s > %s 2>&1',
+            escapeshellarg($mysqldumpPath),
             escapeshellarg($dbHost),
             escapeshellarg($dbUser),
             escapeshellarg($dbPass),
@@ -64,7 +116,38 @@ try {
         exec($cmd, $output, $returnVar);
 
         if ($returnVar !== 0) {
-            throw new Exception("Error al generar backup: " . implode("\n", $output));
+            // Intento 2: Pure PHP dump fallback (útil en Windows sin mysqldump en PATH)
+            try {
+                $pdo = Database::getInstance()->getPdo();
+                $fp = fopen($path, 'w');
+                if (!$fp) throw new Exception("No se pudo crear el archivo de respaldo.");
+                
+                fwrite($fp, "-- Respaldo ContaFC (Fallback PHP)\n");
+                fwrite($fp, "-- Fecha: " . date('Y-m-d H:i:s') . "\n\n");
+                fwrite($fp, "SET FOREIGN_KEY_CHECKS=0;\n\n");
+                
+                $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN);
+                foreach ($tables as $table) {
+                    $create = $pdo->query("SHOW CREATE TABLE `$table`")->fetch(\PDO::FETCH_ASSOC);
+                    fwrite($fp, "DROP TABLE IF EXISTS `$table`;\n");
+                    fwrite($fp, $create['Create Table'] . ";\n\n");
+                    
+                    $rows = $pdo->query("SELECT * FROM `$table`");
+                    while ($row = $rows->fetch(\PDO::FETCH_ASSOC)) {
+                        $vals = array_map(function($val) use ($pdo) {
+                            return $val === null ? 'NULL' : $pdo->quote((string)$val);
+                        }, array_values($row));
+                        fwrite($fp, "INSERT INTO `$table` VALUES (" . implode(',', $vals) . ");\n");
+                    }
+                    fwrite($fp, "\n");
+                }
+                fwrite($fp, "SET FOREIGN_KEY_CHECKS=1;\n");
+                fclose($fp);
+            } catch (Throwable $pe) {
+                if (file_exists($path)) @unlink($path);
+                $errOut = implode(" ", $output);
+                throw new Exception("La utilidad mysqldump falló ($errOut) y el respaldo PHP también: " . $pe->getMessage());
+            }
         }
 
         echo json_encode(['success' => true, 'filename' => $filename]);
@@ -81,6 +164,8 @@ try {
         }
     }
 } catch (Throwable $e) {
-    http_response_code(500);
+    // Usamos 400 en vez de 500 para evitar que el servidor web lo intercepte 
+    // devolviendo el ErrorDocument en HTML que causa error JSON en el cliente
+    http_response_code(400); 
     echo json_encode(['error' => $e->getMessage()]);
 }

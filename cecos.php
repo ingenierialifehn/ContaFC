@@ -65,7 +65,7 @@ $activeNav = 'cecos';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-4xl mx-auto">
+        <div class="w-full">
             <div class="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden">
                 <table class="w-full text-left">
                     <thead>

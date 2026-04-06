@@ -1,18 +1,16 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm
 
 # ─── Dependencias del sistema ─────────────────────────────────────────────────
-# Se añade libfbclient para que el driver pdo_firebird funcione en tiempo de ejecución
-RUN apk add --no-cache \
-    icu-dev \
+# Se añade firebird-dev para que el driver pdo_firebird funcione
+RUN apt-get update && apt-get install -y \
+    libicu-dev \
     libzip-dev \
-    oniguruma-dev \
-    freetype-dev \
-    libjpeg-turbo-dev \
+    libonig-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
     libpng-dev \
-    linux-headers \
     firebird-dev \
-    libfbclient \
-    mysql-client \
+    default-mysql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
     pdo \
@@ -23,7 +21,7 @@ RUN apk add --no-cache \
     gd \
     mbstring \
     opcache \
-    && rm -rf /var/cache/apk/* [cite: 1, 2]
+    && rm -rf /var/lib/apt/lists/*
 
 # ─── Composer ────────────────────────────────────────────────────────────────
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -32,12 +30,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # ─── Configuración de usuario y carpetas ─────────────────────────────────────
-RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -s /bin/sh -D appuser [cite: 3]
+RUN groupadd -g 1000 appgroup && useradd -u 1000 -g appgroup -s /bin/bash -m appuser
 
 # Creamos el directorio temporal para las migraciones y asignamos permisos
 RUN mkdir -p /var/www/tmp && chown -R appuser:appgroup /var/www/tmp /var/www/html
 
-USER appuser [cite: 3]
+USER appuser
 
 EXPOSE 9000
 CMD ["php-fpm"]

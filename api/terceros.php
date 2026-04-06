@@ -24,22 +24,32 @@ try {
             if (!$item) throw new \RuntimeException('Tercero no encontrado.');
             echo json_encode(['data' => $item]);
         } else {
-            $q = trim($_GET['q'] ?? '');
-            if (strlen($q) < 1) {
-                $stmt = $db->prepare("SELECT id, codigo, nit_cc, razon_social AS nombre, tipo_tercero FROM terceros WHERE empresa_id = :eid AND activo = 1 ORDER BY razon_social ASC LIMIT 50");
-                $stmt->execute([':eid' => $eid]);
-                echo json_encode(['data' => $stmt->fetchAll()]);
-            } else {
-                $stmt = $db->prepare(
-                    "SELECT id, codigo, nit_cc, razon_social AS nombre, tipo_tercero
-                     FROM terceros
-                     WHERE empresa_id = :eid AND activo = 1
-                       AND (codigo LIKE :lq OR nit_cc LIKE :nq OR razon_social LIKE :rq)
-                     ORDER BY razon_social ASC LIMIT 20"
-                );
-                $stmt->execute([':eid' => $eid, ':lq' => "{$q}%", ':nq' => "{$q}%", ':rq' => "%{$q}%"]);
-                echo json_encode(['data' => $stmt->fetchAll()]);
+            $q    = trim($_GET['q'] ?? '');
+            $tipo = trim($_GET['tipo'] ?? '');
+            
+            $sql = "SELECT id, codigo, nit_cc, razon_social, razon_social AS nombre, tipo_tercero 
+                    FROM terceros 
+                    WHERE empresa_id = :eid";
+            $params = [':eid' => $eid];
+
+            if ($tipo !== '') {
+                $sql .= " AND (tipo_tercero LIKE :tipo OR tipo_tercero IS NULL OR tipo_tercero = '')";
+                $params[':tipo'] = "%$tipo%";
             }
+
+            if ($q !== '') {
+                $sql .= " AND (LOWER(codigo) LIKE :q1 OR nit_cc LIKE :q2 OR LOWER(razon_social) LIKE :q3)";
+                $params[':q1'] = "%" . strtolower($q) . "%";
+                $params[':q2'] = "%" . strtolower($q) . "%";
+                $params[':q3'] = "%" . strtolower($q) . "%";
+            }
+
+            $sql .= " ORDER BY razon_social ASC LIMIT 50";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['data' => $data]);
         }
     } 
     elseif ($method === 'POST' || $method === 'PUT') {

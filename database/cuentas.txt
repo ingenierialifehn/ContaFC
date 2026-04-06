@@ -1,0 +1,346 @@
+	ACTIVOS	
+	CIRCULANTE	
+11010101	Caja General	
+11010102	Caja Chica	
+11010103	Caja Especial Maparck	
+11020101	Banco X	
+11020102	Banco X	
+11020103	Bco Occidente 11-701-001680-6	
+11020104	Bco Occidente 21-434-024809-5	
+11020105	Banco X	
+11020106	BOFLOZA Occid 21-701-055679-3	
+11020107	Banco Atlantida	
+11020108	BOFLOZA Occid 11-701-002172-9	
+11020109	Bco Atlantida 12-01-2020149-2	
+11050101	Cuentas por cobrar Clientes	
+11050102	Credito Fiscal SAR	
+11050120	Prestamo por Cobrar Empleados	
+11050130	Deudores Varios	
+11050134	Inca	
+11300101	Inventario	
+11300102	Producto Terminado	
+11300103	Inventario en Transito	
+11400104	Inversiones	
+11400105	Credito Fiscal Sersa	
+11400106	Miguel Emilio Canahuati	
+	FIJO	
+11500101	Maquinaria	
+11500102	Mobiliario y Equipo de Oficina	
+11500103	Sistema Contable	
+11500104	Vehiculos	
+11500105	Equipo de Computo	
+11500108	Terrenos	
+11500109	Revaluacion de Activos	
+	DIFERIDO	
+11600101	Gastos de Organización	
+11600102	Depositos en Garantia	
+11600103	Obras en Proceso	
+11600104	Pagos a Cuenta ISR	
+11600105	DEI Credito Fiscal	
+11600106	Cta. Transitoria	
+11600125	Fondo de Pensiones	
+11600126	Otros Activos	
+11600127	Cuentas por cobrar Socios	
+11600128	Otros Activos	
+11600129	Reserva Laboral RAP	
+	FIJO	
+12010101	Maquinaria	
+12010102	Mobiliario y Equipo de Oficina	
+12010103	Sistema Contable	
+12010104	Vehiculos	
+12010105	Equipo de Computo	
+12010106	Terrenos	
+12010108	Urbanizacion Mant. De Calles	
+12010109	Urbanizacion Alcantarillado	
+12010110	Urbanizacion Electrificacion	
+	DIFERIDO	
+15010101	Obras en Proceso	
+15010102	Costos Agregados	
+	PASIVO	
+	CIRCULANTE	
+21010101	Cuentas por Pagar Proveedores	
+21010102	Sueldos y/o Remunerac. X Pagar	
+21010103	XXXX	
+21010104	Otras Cuentas C/Pagar	
+21010105	Deca	
+21010106	Solar Trade Corporation	
+21010107	INCA	
+21010108	ECOENERGIA	
+21010109	Comisiones S/Vtasa por Pagar	
+21010110	Acreedores Varios	
+21010111	Anticipo de Clientes	
+21010112	Sercon/Claro	
+21010113	Cuentas X Pagar/Miguel Canagua	
+21010150	Otros Pasivos	
+	PLANILLAS POR PAGAR	
+22010101	Reserva de Cuentas Incobrables	
+22010102	Aguinaldo	
+22010103	Catorceavo Mes	
+22010104	Comisiones	
+22010105	Prestaciones Laborales	
+22010106	Intereses de Empleados	
+22010107	Miguel Cinta	
+22010108	Miguel Emilio Canahuati	
+22010109	ENEE	
+22010110	Seguro Contra Incendio	
+	OTRAS CUENTAS POR PAGAR	
+23010101	Otras Cuentas por Pagar	
+23010102	ISV Credito Fiscal	
+23010103	ISV Credito Fiscal	
+23010104	Agencia Arevalo Fuentes	
+23010105	Agencia Aduanera Henry Zuniga	
+23010106	Solec Sorto	
+23010107	Hector Santiago Gutierrez	
+23010108	Emilio Elias Combustible	
+23010109	Misael Gomez	
+23010110	Transporte Hernandez	
+23010111	Autoexcel SA	
+23010112	Construcciones de Honduras	
+23010115	Transporte Bonilla Garcia	
+23010116	DHL Honduras	
+23010117	Rapido Cargo	
+	PRESTAMOS POR PAGAR	
+24010101	Banco Atlantida	
+24010102	Prestamos Empleados Atlantida	
+24010103	Banco de Occidednte	
+24010104	Banco Lafice	
+	RETENCIONES POR PAGAR	
+25010101	IHSS	
+25010102	Rap Fosovi	
+25010103	Retencion de la Fuente ISR	
+25010104	Retencion 12.5 % ISR	
+25010105	Impuestro Vecinal por Pagar	
+25010106	Retencion del 1% ISR	
+25010107	Oftalmocentro	
+25010108	Impuesto Sobre Ventas Retenidas	
+25010109	Impuesto Volumen de Ventas	
+25010110	Optica Santa Lucia	
+25010111	Rest. Dist. Dividendos	
+	IMPUESTO SORELA RENTA	
+26010101	Impuesto Sobre la Renta	
+	PASIVO FIJO	
+27010101	Prestamos L/Plazo	
+27010102	Ptmo. Banco Ocidente	
+	CUENTAS POR PAGAR A LARGO PLAZO	
+28010101	Terrenos - Distribucion Lotes	
+28010102	inversiones Santa Fe	
+28010103	Eda Karina Parrales	
+	PASIVO DIFERIDO	
+29010101	Deprec. Acum. Maquinaria	
+29010102	Deprec. Acum. Mobiliario y Equipo	
+29010103	Deprec. Acum. Vehiculos	
+29010104	Deprec. Acum. Equipo de Computo	
+	PATRIMONIO Y CAPITAL	
+31010101	Capital Social	Capital contable
+31010102	Reserva por Rev. De Activos	Capital Social
+31010103	Fondo de Reserva Legal 5%	Reserva por Rev. De Activos
+31010104	Aportes Complementarios	Fondo de Reserva Legal 5%
+31010105	Utilidad Acumulada	Utilidad Acumulada
+31010106	Utilidad del Periodo	XXXXX
+	UTILIDAD O PERDIDA DE PERIODO	
+36050100	Utilidad del Periodo	
+36100101	Perdida del Periodo	
+	INGRESOS	
+	VENTAS	
+41010101	Venta de Terrenos	
+41010102	Venta de Viviendas	
+41010103	Cambios Condiciones Contratos	
+41010104	Productos Financieros	
+41010105	Limpieza Mantenimiento Lotes	
+41010107	Otros Ingresos	
+	REBAJAS Y DESCUENTO	
+42010101	Rebajas/Descuentos S/V Vivienda	
+42010102	Rebajas/Descuentos S/V Terrenos	
+	GASTOS DE VENTA	
+51010101	Sueldos y/o Remuneraciones	
+51010102	Bonificaciones	
+51010103	Catorceavo Mes	
+51010104	Vacaciones	
+51010105	Treceavo Mes	
+51010106	Prestaciones Laborales	
+51010107	Honorarios Profesionales	
+51010108	Atenciones y Agasajos	
+51010109	Gastos de Viaje	
+51010110	Combustibles y Lubricantes	
+51010111	Publicidad, Propaganda y Susc.	
+51010112	Papeleria Y Utiles de Oficina	
+51010113	Servicios de Energia Electrica	
+51010114	Servicio de Agua Potable	
+51010115	Servicio Telefonia	
+51010116	Servicio Cable e Internet	
+51010117	Mantenimiento, Instalac. Sanita	
+51010118	Material Empaque/Embalaje	
+51010119	Fletes y Encomiendas	
+51010120	Mantenimiento Calles y Avenidas	
+51010121	Reconocimiento Gastos Medicos	
+51010122	Comisiones (Tasa Seguridad)	
+51010123	Utensilios de Aseo y Limpieza	
+51010124	Insumos de Aseo	
+51010125	Matriculas y Multas	
+51010126	Urbanizacion-General	
+51010127	Impuestos Municipales, Otros	
+51010128	Servicios Legales	
+51010129	Impuesto Sobre La Renta	
+51010130	Servicios Bancarios (en Linea)	
+51010131	Depreciacion Vehiculos	
+51010132	Depreciacion Mobiliario y Equipo	
+51010133	IHSS Patronal	
+51010134	Mantenimientos Instalaciones Fisicas	
+51010135	Donaciones/Regalias	
+51010136	Gastos de Representacion	
+51010137	RAP Fosovi Patronal	
+51010138	Renta Instalaciones Fisicas	
+51010139	Mantenim. Mob. Equipo de Oficina	
+51010140	Construcciones, Manten. Calles	
+51010141	Permisos Municipales, Ambiente, Etc.	
+51010142	Urbanizacion Sistema de Agua Potable	
+51010143	Soporte Sistema Informaticos	
+51010144	Urbanizacion Sistema Aguas Negras	
+51010145	Urbanizacion Sistema Electrico	
+51010146	Comisiones S/Vta Terrenos/Casas	
+51010147	Renta Vehiculos	
+51010148	Miscelaneos	
+51010149	Regalias	
+	GASTOS ADMINISTRATIVOS	
+53010101	Sueldos	
+53010102	Bonificaciones	
+53010103	Aguinaldo	
+53010104	14avo Mes	
+53010105	Vacaciones	
+53010106	13avo Mes	
+53010107	Prestaciones Laborales	
+53010108	Honorarios Profesionales	
+53010109	Atenciones y Agasajos	
+53010110	Gastos de Viaje	
+53010111	Combustible y Lubricantes	
+53010112	Publicidad y Suscripciones	
+53010113	Papeleria y Utiles de Oficina	
+53010114	Servicios Publicos	
+53010115	Depreciacion de Mobiliario	
+53010116	Depreciacion de Vehiculos	
+53010117	Seguros	
+53010118	Mantenimiento de Vehiculos	
+53010119	Transporte	
+53010120	Alquileres	
+53010121	Mantenimiento Ofic. Mob. Y Equipo	
+53010122	Utencilios de Aseo	
+53010123	Amortizaciones	
+53010124	Impuestos Municipales, Otros	
+53010125	Capacitacion Personal	
+53010126	Seminarios Personal	
+53010127	Bonificaciones	
+53010128	Entrenamiento y Capacitacion	
+53010129	Vigilancia	
+53010130	Comisiones	
+53010131	Multas y Recargos	
+53010132	Remodelacion Local	
+53010134	Donaciones/Regalias	
+53010135	Internet	
+53010136	Cuerpo de Bomberos	
+53010137	Gastos Medicos	
+53010138	Equipo de Computo	
+53010139	Mantenimiento Sistema Contabilidad	
+53010140	Camara de Comercio	
+53010141	Telefonia Celular	
+53010142	Derechos Laborales	
+53010143	Telefono Celular	
+53010144	Donativos/Contribuciones	
+53010145	Energia Electrica	
+53010146	Reparaciones	
+53010147	Honorarios Profesionales	
+53010148	Alquiler de Programa	
+53010149	Arreglos Florales	
+53010150	Colegio de Peritos	
+53010151	Fotocopias y Encuadernados	
+53010152	Varios Miscelaneos	
+53010153	Gastos Legales	
+53010154	Gastos de Representacion	
+53010155	Matricula de Vehiculos	
+53010156	Gastos de Exportacion	
+53010157	Encomiendas	
+53010158	I.H.S.S. PATRONAL	
+53010159	Otros Arrendamientos	
+53010160	Egresos Extraordinarios	
+53010161	Telefonia Celular	
+53010162	Cargas y Descargas	
+53010163	Agua	
+53010164	Gastos Licitacion	
+53010165	Muestras	
+53010166	Gastos en Ferias	
+53010167	Timbres y Especies Fiscales	
+53010168	Fletes y Encomiendas	
+53010169	Bono Navideño	
+53010170	Accesorios Mitsubishi	
+53010171	Insumos Copiadora	
+53010172	Fletes y Encomiendas	
+53010173	Dep. Mobiliario	
+53010174	Comunicacion SKIPE	
+53010175	CICH	
+53010176	INFOP	
+53010177	CHICO	
+53010178	INFOP	
+53010179	Mantenimiento	
+53010180	Stickers-Publicitarios-Otros	
+53010181	Cuota Patronal INFOP	
+53010182	Gastos de importacion	
+53010183	Mantenimiednto de Edificios	
+53010184	Demora y Sobrestadia	
+53010185	Egresos Extraordinarios	
+53010186	Gastos de Exportacion	
+53010187	Gastos de Alimentacion	
+53010188	Fumigacion y rodentizacion	
+53010189	Dominio Web Diconsa	
+53010190	Monitareo GPS	
+53010191	Depreciacion de vehiculos Empleados	
+53010192	Consultorias	
+53010193	Implementos al Personal	
+53010194	Viaticos	
+53010195	Insumos Copiadora	
+53010196	Auditorias Ambientales	
+53010197	Plan de Contigencias	
+53010198	Cable TV	
+	GASTOS FINANCIEROS	
+54010101	Intereses corrientes/Prestamo	
+54010102	Seguros S/Prestamos	
+54010103	Gastos Bancarios	
+54010104	Comisiones Bancarias	
+54010105	Comisiones por Hipotecas	
+54010106	Especies Fiscales	
+54010107	Gastos por Garantia	
+54010108	Debitos Elab. Chequera	
+54010109	Gastos de Avaluo	
+54010110	Diferencial Cambiario	
+54010111	Intereses Moratorios	
+54010112	Comis. Liberacion Reservas	
+54010113	Gastos Poliza de Seguros	
+54010114	Gastos por CIC	
+54010115	Retencion Intereses	
+54010116	Comision Tarjetas de Credito	
+54010117	Intereses Manejo de Linea de	
+54010118	Intereses Manejo de Linea de	
+54010119	Comision por Garantia Licitacion	
+54010120	Seguridad Poblacional	
+	GASTOS NO DEDUCIBLES	
+55010101	Infop	
+55010102	Multas y recargos	
+55010103	Gastos no Deducibles	
+	GASTOS DE ALMACEN	
+56010101	Sueldos y Salarios	
+56010102	Bonificaciones	
+56010103	Catorceavo Mes	
+56010104	Vacaciones	
+56010105	Treceavo Mes	
+56010106	Prestaciones Laborales	
+56010107	Atenciones y Agasajos	
+56010108	Combustibles y Lubricantes	
+56010109	Papeleria y Utiles de Oficina	
+56010110	Mantenimiento de Mob y Equipo	
+56010111	Mantenimiento de Vehiculos	
+56010112	Fletes y Encomiendas	
+56010113	Egresos Extraordinarios	
+	COSTO DE VENTA	
+61010101	Costo de Ventas	
+	OTROS EGRESOS	
+71010101	Produccion en Proceso	
+71010102	Mano de Obra Directa	
+71010103	Otros Gastos Otros Egresos	

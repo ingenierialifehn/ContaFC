@@ -30,28 +30,6 @@ $userIni   = strtoupper(substr($_sidebarUser['nombre'] ?? 'A', 0, 1));
 $user      = $_sidebarUser;   // Aseguramos que $user siempre esté disponible
 $activeNav = $activeNav ?? '';
 
-if (!function_exists('navLink')) {
-    function navLink(string $href, string $icon, string $label, string $active, string $key): string {
-        $isActive = ($active === $key);
-        $baseCls  = 'flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 text-[13px] font-bold tracking-tight relative group';
-        
-        if ($isActive) {
-            $cls       = $baseCls . ' bg-white/5 text-sky-400 shadow-sm shadow-black/20 border border-white/5';
-            $iconClass = "text-sky-400 drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]";
-        } else {
-            $cls       = $baseCls . ' text-slate-500 hover:bg-white/[0.03] hover:text-slate-200 border border-transparent';
-            $iconClass = "text-slate-600 group-hover:text-slate-300 transition-colors";
-        }
-        
-        return "
-        <a href=\"{$href}\" data-nav-key=\"{$key}\" class=\"{$cls}\">
-            <span class=\"flex-shrink-0 {$iconClass}\">{$icon}</span>
-            <span class=\"truncate\">{$label}</span>
-            " . ($isActive ? '<div class="absolute right-3 w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_10px_#0ea5e9]"></div>' : '') . "
-        </a>";
-    }
-}
-
 // Icons
 $iDash   = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>';
 $iPOS    = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
@@ -62,6 +40,69 @@ $iBook   = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 
 $iChart  = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
 $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
 
+// 📋 Estructura de Navegación por Categorías
+$MENU = [
+    'General' => [
+        ['dashboard',   'dashboard.php', $iDash,   'Resumen Global'],
+        ['reportes',    'reportes.php',  $iChart,  'Reportes & Balances'],
+    ],
+    'Ecosistema Comercial' => [
+        ['pos',         'pos.php',       $iPOS,    'Punto de Venta (POS)'],
+        ['factura',     'factura.php',   $iBook,   'Facturación SAR'],
+        ['productos',   'productos.php', $iCart,   'Inventario y Kits'],
+        ['logistica',   'logistica.php', $iLogistic,'Logística y Envíos'],
+        ['contratos',   'contratos.php', $iCont,   'Fact. Recurrente'],
+        ['devoluciones','devolucion.php',$iLogistic,'Notas de Crédito'],
+    ],
+    'Contabilidad Core' => [
+        ['asiento',     'asiento.php',   $iBook,   'Asientos de Diario'],
+        ['comprobantes','comprobantes.php',$iChart, 'Comprobantes'],
+        ['activos',     'activos.php',   $iCont,   'Activos Fijos'],
+        ['tesoreria',   'tesoreria_bancos.php', $iPOS, 'Bancos y Tesorería'],
+        ['recurrente',  'tesoreria_recurrentes.php', $iDash, 'Egreso Recurrente'],
+        ['cecos',       'cecos.php',     $iChart,  'Centros de Costo'],
+        ['proyectos',   'proyectos.php', $iChart,  'Gestión de Proyectos'],
+        ['auditoria',   'auditoria.php', $iSettings,'Auditoría & Logs'],
+        ['certificados','certificados_hnd.php', $iBook, 'Certificados SAR'],
+        ['libros',      'libros_oficiales.php', $iBook, 'Libros Oficiales'],
+        ['puc',         'puc.php',       $iBook,   'Plan de Cuentas'],
+        ['terceros',    'terceros.php',  $iSettings,'Clientes y Prov.'],
+    ],
+    'Cartera y Cobros' => [
+        ['cartera',     'cartera.php',   $iChart,  'Créditos y Recaudos'],
+    ],
+    'Administración' => [
+        ['usuarios',    'usuarios.php',  $iSettings,'Usuarios'],
+        ['cai',         'cai.php',       $iSettings,'Resoluciones SAR'],
+        ['empresas',    'empresas.php',  $iSettings,'Ajustes Multiempresa'],
+        ['backups',     'backups.php',   $iSettings,'Copias de Seguridad'],
+    ]
+];
+
+if (!function_exists('navLink')) {
+    function navLink(string $href, string $icon, string $label, string $active, string $key): string {
+        // SEGURIDAD: Si no tiene permiso, no renderizar nada
+        if (!\ContaFC\Core\Auth::canAccess($key, 'r')) return "";
+
+        $isActive = ($active === $key);
+        $baseCls  = 'flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 text-[13px] font-bold tracking-tight relative group';
+        
+        $cls      = $isActive 
+            ? $baseCls . ' bg-white/5 text-sky-400 shadow-sm shadow-black/20 border border-white/5'
+            : $baseCls . ' text-slate-500 hover:bg-white/[0.03] hover:text-slate-200 border border-transparent';
+            
+        $iconClass = $isActive 
+            ? "text-sky-400 drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]"
+            : "text-slate-600 group-hover:text-slate-300 transition-colors";
+        
+        return "
+        <a href=\"{$href}\" data-nav-key=\"{$key}\" class=\"{$cls}\">
+            <span class=\"flex-shrink-0 {$iconClass}\">{$icon}</span>
+            <span class=\"truncate\">{$label}</span>
+            " . ($isActive ? '<div class="absolute right-3 w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_10px_#0ea5e9]"></div>' : '') . "
+        </a>";
+    }
+}
 ?>
 <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -154,14 +195,13 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
 
             // ══════════════════════════════════════════════════════════
             //  Motor SPA – Navegación sin recarga de página
-            //  Intercepta links del sidebar → fetch → reemplaza <main>
             // ══════════════════════════════════════════════════════════
 
             // Cerrar dropdown al hacer click fuera
             document.addEventListener('click', (e) => {
                 if (!document.getElementById('company-dropdown-container').contains(e.target)) {
                     const menu = document.getElementById('company-dropdown-menu');
-                    if (!menu.classList.contains('opacity-0')) {
+                    if (menu && !menu.classList.contains('opacity-0')) {
                         menu.classList.add('opacity-0', 'scale-95', 'invisible');
                         document.getElementById('dd-arrow').classList.remove('rotate-180');
                     }
@@ -175,10 +215,8 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
 
                 if (!mainEl) { window.location = url; return; }
 
-                // Guardar scroll del sidebar
                 if (nav) sessionStorage.setItem('contafc_sidebar_scroll', nav.scrollTop);
 
-                // Loading state
                 if (loader) loader.classList.remove('hidden');
                 mainEl.style.opacity    = '0.35';
                 mainEl.style.transition = 'opacity .12s';
@@ -193,16 +231,13 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
 
                         if (!newMain) { window.location = url; return; }
 
-                        // Sustituir contenido del main
                         mainEl.innerHTML = newMain.innerHTML;
                         mainEl.className = newMain.className;
                         mainEl.style.opacity = '1';
                         if (newTitle) document.title = newTitle;
 
-                        // Actualizar URL
                         if (pushState) history.pushState({ spaUrl: url }, newTitle, url);
 
-                        // Actualizar enlace activo en sidebar
                         const pageKey = url.split('/').pop().replace('.php', '').split('?')[0];
                         document.querySelectorAll('#sidebar-nav a[data-nav-key]').forEach(a => {
                             const active = a.dataset.navKey === pageKey;
@@ -214,7 +249,6 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
                             a.classList.toggle('border-transparent',   !active);
                         });
 
-                        // Re-ejecutar scripts inline del módulo cargado
                         mainEl.querySelectorAll('script').forEach(old => {
                             const s = document.createElement('script');
                             if (old.src) { s.src = old.src; s.async = false; }
@@ -227,8 +261,6 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
                     .catch(() => { window.location = url; })
                     .finally(() => {
                         if (loader) loader.classList.add('hidden');
-
-                        // Restaurar scroll del sidebar justo después de navegar
                         if (nav) {
                             const saved = sessionStorage.getItem('contafc_sidebar_scroll');
                             if (saved) nav.scrollTop = parseInt(saved, 10);
@@ -236,7 +268,6 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
                     });
             }
 
-            // Interceptar clicks en los links del sidebar
             document.getElementById('sidebar-nav')?.addEventListener('click', (e) => {
                 const link = e.target.closest('a[href]');
                 if (!link) return;
@@ -247,16 +278,13 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
                 }
             });
 
-            // Botón Atrás/Adelante del navegador
             window.addEventListener('popstate', (e) => {
                 const target = e.state?.spaUrl || window.location.href;
                 spaNavigate(target, false);
             });
 
-            // Estado inicial del historial
             history.replaceState({ spaUrl: window.location.href }, document.title, window.location.href);
 
-            // Restaurar scroll del sidebar en la carga inicial
             (() => {
                 const nav   = document.getElementById('sidebar-nav');
                 const saved = sessionStorage.getItem('contafc_sidebar_scroll');
@@ -268,63 +296,19 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
     <!-- Navigation -->
     <nav id="sidebar-nav" class="flex-1 px-4 overflow-y-auto no-scrollbar space-y-6 pb-10">
         
+        <?php foreach ($MENU as $cat => $items): 
+            $visibleItems = array_filter($items, fn($i) => \ContaFC\Core\Auth::canAccess($i[0], 'r'));
+            if (empty($visibleItems)) continue;
+        ?>
         <div>
-            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1">General</p>
+            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1"><?= $cat ?></p>
             <div class="space-y-1">
-                <?= navLink("$b/dashboard.php", $iDash, 'Resumen Global', $activeNav, 'dashboard') ?>
-                <?= navLink("$b/reportes.php", $iChart, 'Reportes & Balances', $activeNav, 'reportes') ?>
+                <?php foreach ($visibleItems as $i): ?>
+                    <?= navLink("$b/{$i[1]}", $i[2], $i[3], $activeNav, $i[0]) ?>
+                <?php endforeach; ?>
             </div>
         </div>
-
-        <div>
-            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1">Ecosistema Comercial</p>
-            <div class="space-y-1">
-                <?= navLink("$b/pos.php", $iPOS, 'Punto de Venta (POS)', $activeNav, 'pos') ?>
-                <?= navLink("$b/factura.php", $iBook, 'Facturación SAR', $activeNav, 'factura') ?>
-                <?= navLink("$b/productos.php", $iCart, 'Inventario y Kits', $activeNav, 'productos') ?>
-                <?= navLink("$b/logistica.php", $iLogistic, 'Logística y Envíos', $activeNav, 'logistica') ?>
-                <?= navLink("$b/contratos.php", $iCont, 'Fact. Recurrente', $activeNav, 'contratos') ?>
-                <?= navLink("$b/devolucion.php", $iLogistic, 'Notas de Crédito', $activeNav, 'devoluciones') ?>
-            </div>
-        </div>
-
-        <div>
-            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1">Contabilidad Core</p>
-            <div class="space-y-1">
-                <?= navLink("$b/asiento.php", $iBook, 'Asientos de Diario', $activeNav, 'asiento') ?>
-                <?= navLink("$b/comprobantes.php", $iChart, 'Comprobantes', $activeNav, 'comprobantes') ?>
-                <?= navLink("$b/activos.php", $iCont, 'Activos Fijos', $activeNav, 'activos') ?>
-                <?= navLink("$b/tesoreria_bancos.php", $iPOS, 'Bancos y Tesorería', $activeNav, 'tesoreria') ?>
-                <?= navLink("$b/tesoreria_recurrentes.php", $iDash, 'Egreso Recurrente', $activeNav, 'recurrente') ?>
-                <?= navLink("$b/cecos.php", $iChart, 'Centros de Costo', $activeNav, 'cecos') ?>
-                <?= navLink("$b/auditoria.php", $iSettings, 'Auditoría & Logs', $activeNav, 'auditoria') ?>
-                <?= navLink("$b/certificados_hnd.php", $iBook, 'Certificados SAR', $activeNav, 'certificados') ?>
-                <?= navLink("$b/libros_oficiales.php", $iBook, 'Libros Oficiales', $activeNav, 'libros') ?>
-                <?= navLink("$b/puc.php", $iBook, 'Plan de Cuentas', $activeNav, 'puc') ?>
-                <?= navLink("$b/terceros.php", $iSettings, 'Clientes y Prov.', $activeNav, 'terceros') ?>
-            </div>
-        </div>
-
-        <div>
-            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1">Cartera y Cobros</p>
-            <div class="space-y-1">
-                <?= navLink("$b/cartera.php", $iChart, 'Créditos y Recaudos', $activeNav, 'cartera') ?>
-            </div>
-        </div>
-
-        <?php if (\ContaFC\Core\Auth::hasRole('admin')): ?>
-        <div>
-            <p class="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3 ml-1">Administración</p>
-            <div class="space-y-1">
-                <?= navLink("$b/setup_datos.php", $iSettings, 'Mantenimiento y Reseteo', $activeNav, 'setup') ?>
-                <?= navLink("$b/migracion.php", $iLogistic, 'Migración GDB (WX)', $activeNav, 'migracion') ?>
-                <?= navLink("$b/usuarios.php", $iSettings, 'Gestión de Personal', $activeNav, 'usuarios') ?>
-                <?= navLink("$b/cai.php", $iSettings, 'Resoluciones SAR', $activeNav, 'cai') ?>
-                <?= navLink("$b/empresas.php", $iSettings, 'Ajustes Multiempresa', $activeNav, 'empresas') ?>
-                <?= navLink("$b/backups.php", $iSettings, 'Copias de Seguridad', $activeNav, 'backups') ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        <?php endforeach; ?>
 
     </nav>
 

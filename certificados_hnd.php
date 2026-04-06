@@ -73,7 +73,7 @@ $activeNav = 'certificados';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-7xl mx-auto flex flex-col gap-8">
+        <div class="flex flex-col gap-8">
             
             <!-- Listado de certificados emitidos -->
             <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">

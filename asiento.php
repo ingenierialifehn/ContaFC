@@ -81,7 +81,18 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
     </style>
 </head>
 <body class="h-full font-sans flex">
-<?php $activeNav = 'asiento'; require __DIR__ . '/partials/sidebar.php'; ?>
+<!-- ─── Sidebar Izquierdo (Módulos Rápidos) ────────────────────────────────── -->
+<aside class="w-16 bg-slate-950 flex-shrink-0 flex flex-col items-center py-6 gap-6 z-50 overflow-y-auto no-scrollbar">
+    <a href="dashboard.php" class="p-3 text-slate-500 hover:text-white transition-colors" title="Dashboard">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    </a>
+    <a href="comprobantes.php" class="p-3 text-slate-500 hover:text-white transition-colors" title="Asientos y Comprobantes">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    </a>
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 cursor-default" title="Registro de Asiento">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+</aside>
 
 <!-- ─── Contenido principal ──────────────────────────────────────────────── -->
 <main class="flex-1 overflow-auto">
@@ -209,13 +220,13 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
                             <th class="px-2 py-2 text-left w-40">Tercero</th>
                             <th class="px-2 py-2 text-left w-20">Doc.Tipo</th>
                             <th class="px-2 py-2 text-left w-24">Doc.Número</th>
-                            <th class="px-2 py-2 text-left w-24">Vencimiento</th>
                             <th class="px-2 py-2 text-left w-24">Proyecto</th>
                             <th class="px-2 py-2 text-left w-20">Centro C.</th>
                             <th class="px-2 py-2 text-right w-32">Débito</th>
                             <th class="px-2 py-2 text-right w-32">Crédito</th>
                             <th class="px-2 py-2 text-center w-20">ISV (%)</th>
                             <th class="px-2 py-2 text-left min-w-40">Descripción</th>
+                            <th class="px-2 py-2 text-left w-24">Fecha</th>
                         </tr>
                     </thead>
                     <tbody id="cuerpo-grid">
@@ -249,6 +260,7 @@ let lineaSelIdx  = -1;
 let comprobanteId = <?= $editId ?? 'null' ?>;
 
 const DEBOUNCE_MS = 280;
+const HOY_SISTEMA = '<?= date('Y-m-d') ?>';
 
 // ─── Inicialización ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -262,7 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ─── Modelo de línea ─────────────────────────────────────────────────────
 function nuevaLinea() {
     return { cuenta_id: null, cuenta_codigo: '', cuenta_nombre: '', tercero_id: null, tercero_nombre: '',
-             doc_cruce_tipo: '', doc_cruce_num: '', vencimiento: '', proyecto_nombre: '', ceco_nombre: '',
+             doc_cruce_tipo: '', doc_cruce_num: '', fecha: HOY_SISTEMA, proyecto_id: null, proyecto_nombre: '', 
+             ceco_id: null, ceco_nombre: '',
              debito: 0, credito: 0, descripcion: '' };
 }
 
@@ -278,81 +291,128 @@ function addLinea() {
     }, 50);
 }
 
-// ─── Renderizar grid ─────────────────────────────────────────────────────
-function renderGrid() {
+// ─── Renderizar grid (Optimizado para miles de líneas con Lazy Loading) ──
+const CHUNK_SIZE = 100;
+let displayedCount = 0;
+let isRendering = false;
+
+function renderGrid(append = false) {
+    if (isRendering) return;
     const tbody = document.getElementById('cuerpo-grid');
-    tbody.innerHTML = lineas.map((l, i) => `
-    <tr class="grid-row border-b border-slate-100 ${lineaSelIdx === i ? 'selected' : ''}"
-        id="row-${i}" onclick="selectLinea(${i})">
-        <td class="px-2 py-1 text-slate-400 w-8 font-mono">${i+1}</td>
-        <td class="editing w-32 relative">
-            <input type="text" class="grid-input cell-cuenta-cod font-mono" value="${esc(l.cuenta_codigo)}"
-                   placeholder="Código..."
-                   onchange="setCuentaByCodigo(${i}, this.value)"
-                   onkeydown="handleGridKey(event, ${i}, 0)"
-                   id="inp-cuenta-cod-${i}">
-        </td>
-        <td class="px-2 py-1 text-slate-700 min-w-48 truncate max-w-xs italic text-slate-500" id="cell-nombre-${i}">
-            ${esc(l.cuenta_nombre) || '<span class="text-slate-300">Buscar cuenta...</span>'}
-        </td>
-        <td class="px-2 py-1 text-center text-slate-400 w-8">→</td>
-        <td class="editing w-40">
-            <input type="text" class="grid-input cell-tercero" value="${esc(l.tercero_nombre)}"
-                   placeholder="Tercero..."
-                   oninput="searchTerceroLinea(${i}, this.value)"
-                   id="inp-tercero-${i}">
-        </td>
-        <td class="editing w-20">
-            <input type="text" class="grid-input font-mono" value="${esc(l.doc_cruce_tipo)}"
-                   placeholder="Tipo" oninput="lineas[${i}].doc_cruce_tipo=this.value">
-        </td>
-        <td class="editing w-24">
-            <input type="text" class="grid-input font-mono" value="${esc(l.doc_cruce_num)}"
-                   placeholder="Número" oninput="lineas[${i}].doc_cruce_num=this.value">
-        </td>
-        <td class="editing w-24">
-            <input type="date" class="grid-input text-xs" value="${esc(l.vencimiento)}"
-                   onchange="lineas[${i}].vencimiento=this.value">
-        </td>
-        <td class="px-2 py-1 text-slate-400 text-xs">—</td>
-        <td class="px-2 py-1 text-slate-400 text-xs">—</td>
-        <td class="editing w-32">
-            <input type="number" class="grid-input text-right font-mono text-emerald-700"
-                   value="${l.debito > 0 ? l.debito.toFixed(2) : ''}"
-                   placeholder="0.00" step="0.01" min="0"
-                   onchange="setDebito(${i}, this.value)"
-                   id="inp-deb-${i}">
-        </td>
-        <td class="editing w-32">
-            <input type="number" class="grid-input text-right font-mono text-blue-700"
-                   value="${l.credito > 0 ? l.credito.toFixed(2) : ''}"
-                   placeholder="0.00" step="0.01" min="0"
-                   onchange="setCredito(${i}, this.value)"
-                   id="inp-cre-${i}">
-        </td>
-        <td class="editing w-20">
-            <select class="grid-input text-center font-bold text-honduras" onchange="calcularISV(${i}, this.value)">
-                <option value="0">0%</option>
-                <option value="15" ${l.isv_tasa == 15 ? 'selected' : ''}>15%</option>
-                <option value="18" ${l.isv_tasa == 18 ? 'selected' : ''}>18%</option>
-            </select>
-        </td>
-        <td class="editing min-w-40">
-            <input type="text" class="grid-input text-slate-600" value="${esc(l.descripcion)}"
-                   placeholder="Descripción del movimiento..."
-                   oninput="lineas[${i}].descripcion=this.value">
-        </td>
-    </tr>
-    `).join('');
+    const total = lineas.length;
+    
+    if (!append) {
+        tbody.innerHTML = '';
+        displayedCount = 0;
+        isRendering = true;
+        // Iniciar scroll monitoring
+        setupLazyScroll();
+    }
+
+    const start = displayedCount;
+    const end   = Math.min(start + CHUNK_SIZE, total);
+    if (start >= total) { isRendering = false; return; }
+
+    const fragment = document.createDocumentFragment();
+    for (let i = start; i < end; i++) {
+        const l = lineas[i];
+        const tr = document.createElement('tr');
+        tr.className = `grid-row border-b border-slate-100 ${lineaSelIdx === i ? 'selected' : ''}`;
+        tr.id = `row-${i}`;
+        tr.onclick = () => selectLinea(i);
+        
+        tr.innerHTML = `
+            <td class="px-2 py-1 text-slate-400 w-8 font-mono text-[10px]">${i+1}</td>
+            <td class="editing w-32">
+                <input type="text" class="grid-input cell-cuenta-cod font-mono" value="${esc(l.cuenta_codigo)}"
+                       onchange="setCuentaByCodigo(${i}, this.value)" 
+                       ondblclick="abrirCatalogo(${i})"
+                       id="inp-cuenta-cod-${i}" title="Doble clic para ver catálogo">
+            </td>
+            <td class="px-2 py-1 text-slate-700 min-w-48 truncate max-w-[200px] text-[11px]" id="cell-nombre-${i}">
+                ${esc(l.cuenta_nombre)}
+            </td>
+            <td class="px-2 py-1 text-center text-slate-300 w-8">→</td>
+            <td class="editing w-40">
+                <input type="text" class="grid-input cell-tercero-nom" value="${esc(l.tercero_nombre)}" 
+                       onchange="lineas[${i}].tercero_nombre=this.value"
+                       ondblclick="abrirCatalogoTerceros(${i})" title="Doble clic para ver terceros">
+            </td>
+            <td class="editing w-20">
+                <input type="text" class="grid-input font-mono cell-doc-tipo" value="${esc(l.doc_cruce_tipo)}" 
+                       onchange="lineas[${i}].doc_cruce_tipo=this.value"
+                       ondblclick="abrirCatalogoDocTipo(${i})" title="Doble clic para tipos de doc.">
+            </td>
+            <td class="editing w-24">
+                <input type="text" class="grid-input font-mono cell-doc-num" value="${esc(l.doc_cruce_num)}" onchange="lineas[${i}].doc_cruce_num=this.value">
+            </td>
+            <td class="editing w-24">
+                <input type="text" class="grid-input cell-proyecto" value="${esc(l.proyecto_nombre)}" 
+                       onchange="lineas[${i}].proyecto_nombre=this.value"
+                       ondblclick="abrirCatalogoProyectos(${i})" title="Doble clic para proyectos">
+            </td>
+            <td class="editing w-20">
+                <input type="text" class="grid-input cell-ceco" value="${esc(l.ceco_nombre)}" 
+                       onchange="lineas[${i}].ceco_nombre=this.value"
+                       ondblclick="abrirCatalogoCECO(${i})" title="Doble clic para centros de costo">
+            </td>
+            <td class="editing w-32">
+                <input type="number" class="grid-input text-right font-mono text-emerald-700 cell-debito"
+                       value="${l.debito > 0 ? parseFloat(l.debito).toFixed(2) : ''}"
+                       onchange="setDebito(${i}, this.value)" id="inp-deb-${i}">
+            </td>
+            <td class="editing w-32">
+                <input type="number" class="grid-input text-right font-mono text-blue-700 cell-credito"
+                       value="${l.credito > 0 ? parseFloat(l.credito).toFixed(2) : ''}"
+                       onchange="setCredito(${i}, this.value)" id="inp-cre-${i}">
+            </td>
+            <td class="editing w-20 text-center text-slate-300">—</td>
+            <td class="editing min-w-40">
+                <input type="text" class="grid-input text-slate-600" value="${esc(l.descripcion)}" onchange="lineas[${i}].descripcion=this.value">
+            </td>
+            <td class="editing w-24">
+                <input type="date" class="grid-input text-[10px]" value="${esc(l.fecha)}" onchange="lineas[${i}].fecha=this.value">
+            </td>
+        `;
+        fragment.appendChild(tr);
+    }
+    
+    tbody.appendChild(fragment);
+    displayedCount = end;
+    isRendering = false;
+
+    document.getElementById('status-msg').textContent = `Mostrando ${displayedCount} de ${total} líneas.`;
 }
 
-// ─── Selección de fila ────────────────────────────────────────────────────
+function setupLazyScroll() {
+    const main = document.querySelector('main');
+    main.onscroll = () => {
+        if (isRendering) return;
+        // Si faltan menos de 500px para llegar al fondo, cargar más
+        if (main.scrollTop + main.clientHeight >= main.scrollHeight - 500) {
+            if (displayedCount < lineas.length) {
+                renderGrid(true);
+            }
+        }
+    };
+}
+
+// ─── Selección de fila (Optimizado) ──────────────────────────────────────
 function selectLinea(idx) {
+    // Quitar selección previa
+    if (lineaSelIdx >= 0) {
+        document.getElementById(`row-${lineaSelIdx}`)?.classList.remove('selected');
+    }
+    
     lineaSelIdx = idx;
-    document.querySelectorAll('#cuerpo-grid tr').forEach((r, i) => r.classList.toggle('selected', i === idx));
+    const row = document.getElementById(`row-${idx}`);
+    if (row) row.classList.add('selected');
+
     const l = lineas[idx];
-    document.getElementById('foot-cuenta').textContent = l.cuenta_codigo || '—';
-    document.getElementById('foot-benef').textContent  = l.tercero_nombre || '—';
+    if (l) {
+        document.getElementById('foot-cuenta').textContent = l.cuenta_codigo || '—';
+        document.getElementById('foot-benef').textContent  = l.tercero_nombre || '—';
+    }
 }
 
 // ─── Setters de campo ─────────────────────────────────────────────────────
@@ -584,6 +644,7 @@ async function guardarComprobante() {
             credito:      l.credito,
             descripcion:  l.descripcion || null,
             tercero_id:   l.tercero_id || null,
+            fecha:        l.fecha || null,
         })),
     };
 
@@ -685,7 +746,7 @@ async function cargarComprobante(id) {
         descripcion:    l.descripcion || '',
         doc_cruce_tipo: l.doc_cruce_tipo || '',
         doc_cruce_num:  l.doc_cruce_num  || '',
-        vencimiento:    l.vencimiento    || '',
+        fecha:          l.fecha          || '',
     }));
 
     renderGrid();
@@ -710,6 +771,292 @@ function fmt(v) {
 function esc(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Catálogos vía Doble Clic ─────────────────────────────────────────────
+
+async function abrirCatalogo(rowIdx) {
+    Swal.fire({
+        title: '<div class="text-xl font-black text-slate-800 tracking-tight">📚 Seleccionar Cuenta Contable</div>',
+        html: `
+            <div class="text-left space-y-4 p-2">
+                <div class="relative">
+                    <input id="sw-puc-search" type="text" placeholder="Escriba código o nombre de cuenta..." 
+                           class="w-full h-12 border border-slate-200 rounded-2xl px-12 outline-none focus:ring-4 focus:ring-blue-400/10 focus:border-blue-400 text-sm font-bold shadow-sm transition-all">
+                    <svg class="w-5 h-5 absolute left-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <div class="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden shadow-inner">
+                    <div class="max-h-[50vh] overflow-y-auto no-scrollbar" id="sw-puc-list">
+                        <div class="py-20 text-center text-slate-400 italic text-xs font-medium uppercase tracking-widest opacity-60">Busque la cuenta para la línea #${rowIdx+1}...</div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '650px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { container:'backdrop-blur-sm', popup:'rounded-[2.5rem] border-none shadow-2xl' },
+        didOpen: () => {
+            const inp = document.getElementById('sw-puc-search');
+            let timer = null;
+            inp.focus();
+            inp.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                   const q = inp.value.trim();
+                   const list = document.getElementById('sw-puc-list');
+                   if (q.length < 2) { list.innerHTML = '<div class="py-20 text-center text-slate-400 italic text-xs">Escriba al menos 2 caracteres...</div>'; return; }
+                   list.innerHTML = '<div class="py-20 text-center text-slate-400 italic text-xs animate-pulse">Consultando PUC...</div>';
+                   
+                   try {
+                       const res = await fetch(`<?= BASE_URL ?>/api/cuentas.php?q=${encodeURIComponent(q)}`);
+                       const j = await res.json();
+                       const data = j.data || [];
+                       if (!data.length) { list.innerHTML = '<div class="py-20 text-center text-slate-400 italic text-xs font-bold text-rose-500 uppercase tracking-widest">✗ Sin resultados</div>'; return; }
+                       
+                       list.innerHTML = `
+                           <table class="w-full text-left text-xs border-collapse divide-y divide-slate-100">
+                               <tbody class="bg-white">
+                                   ${data.map(c => `
+                                       <tr class="hover:bg-blue-50/50 transition-all cursor-pointer group" onclick="selectCuenta(${rowIdx}, ${c.id}, '${c.codigo}', '${esc(c.nombre)}', '${c.naturaleza}')">
+                                           <td class="px-6 py-4 font-mono font-black text-blue-600 text-sm w-32 border-r border-slate-50">${c.codigo}</td>
+                                           <td class="px-6 py-4 font-bold text-slate-700 leading-tight">${c.nombre}</td>
+                                           <td class="px-6 py-4 text-center w-12">
+                                                <span class="px-2 py-1 rounded-lg ${c.naturaleza === 'D' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'} font-black text-[9px] border shadow-sm">${c.naturaleza}</span>
+                                           </td>
+                                       </tr>
+                                   `).join('')}
+                               </tbody>
+                           </table>`;
+                   } catch(e) { list.innerHTML = '<div class="py-20 text-center text-red-500 italic text-xs">Error de conexión</div>'; }
+                }, 250);
+            });
+        }
+    });
+}
+
+function selectCuenta(idx, id, codigo, nombre, natura) {
+    lineas[idx].cuenta_id     = id;
+    lineas[idx].cuenta_codigo = codigo;
+    lineas[idx].cuenta_nombre = nombre;
+    
+    // Actualizar fila sin re-render completo
+    const row = document.getElementById(`row-${idx}`);
+    if (row) {
+        row.querySelector('.cell-cuenta-cod').value = codigo;
+        document.getElementById(`cell-nombre-${idx}`).textContent = nombre;
+        // Salto automático a débitos o créditos
+        setTimeout(() => {
+            const target = (natura === 'D') ? `inp-deb-${idx}` : `inp-cre-${idx}`;
+            document.getElementById(target)?.focus();
+        }, 100);
+    }
+    Swal.close();
+}
+
+async function abrirCatalogoTerceros(rowIdx) {
+    Swal.fire({
+        title: '<div class="text-xl font-black text-slate-800 tracking-tight">👤 Seleccionar Tercero / Cliente</div>',
+        html: `
+            <div class="text-left space-y-4 p-2">
+                <div class="relative">
+                    <input id="sw-ter-search" type="text" placeholder="Nombre, RTN o ID..." 
+                           class="w-full h-12 border border-slate-200 rounded-2xl px-12 outline-none focus:ring-4 focus:ring-emerald-400/10 focus:border-emerald-400 text-sm font-bold shadow-sm transition-all">
+                    <svg class="w-5 h-5 absolute left-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <div class="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden shadow-inner">
+                    <div class="max-h-[50vh] overflow-y-auto no-scrollbar" id="sw-ter-list">
+                        <div class="py-20 text-center text-slate-400 italic text-xs font-medium uppercase tracking-widest opacity-60">Busque el tercero para la línea #${rowIdx+1}...</div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '650px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { container:'backdrop-blur-sm', popup:'rounded-[2.5rem] border-none shadow-2xl' },
+        didOpen: () => {
+            const inp = document.getElementById('sw-ter-search');
+            let timer = null;
+            inp.focus();
+            inp.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                   const q = inp.value.trim();
+                   const list = document.getElementById('sw-ter-list');
+                   if (q.length < 1) return;
+                   list.innerHTML = '<div class="py-20 text-center text-slate-400 italic text-xs animate-pulse">Buscando en base de datos...</div>';
+                   
+                   try {
+                       const res = await fetch(`<?= BASE_URL ?>/api/terceros.php?q=${encodeURIComponent(q)}`);
+                       const j = await res.json();
+                       const data = j.data || [];
+                       if (!data.length) { list.innerHTML = '<div class="py-20 text-center text-slate-400 italic text-xs font-bold text-rose-500 uppercase tracking-widest">✗ Sin resultados</div>'; return; }
+                       
+                       list.innerHTML = `
+                           <table class="w-full text-left text-xs border-collapse divide-y divide-slate-100">
+                               <tbody class="bg-white">
+                                   ${data.map(t => `
+                                       <tr class="hover:bg-emerald-50/50 transition-all cursor-pointer group" onclick="selectTercero(${rowIdx}, ${t.id}, '${esc(t.nombre)}')">
+                                           <td class="px-6 py-4 font-mono font-bold text-emerald-600 text-sm w-32 border-r border-slate-50">${t.nit_cc}</td>
+                                           <td class="px-6 py-4 font-bold text-slate-700 leading-tight">
+                                                ${t.nombre}
+                                                <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">${t.tipo_tercero || ''}</div>
+                                           </td>
+                                       </tr>
+                                   `).join('')}
+                               </tbody>
+                           </table>`;
+                   } catch(e) { list.innerHTML = '<div class="py-20 text-center text-red-500 italic text-xs">Error de conexión</div>'; }
+                }, 250);
+            });
+        }
+    });
+}
+
+function selectTercero(idx, id, nombre) {
+    lineas[idx].tercero_id     = id;
+    lineas[idx].tercero_nombre = nombre;
+    
+    const row = document.getElementById(`row-${idx}`);
+    if (row) {
+        row.querySelector('.cell-tercero-nom').value = nombre;
+    }
+    Swal.close();
+}
+
+async function abrirCatalogoProyectos(rowIdx) {
+    Swal.fire({
+        title: '<div class="text-xl font-black text-slate-800 tracking-tight">🏗️ Seleccionar Proyecto</div>',
+        html: `
+            <div class="text-left space-y-4 p-2">
+                <div class="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden shadow-inner">
+                    <div class="max-h-[50vh] overflow-y-auto no-scrollbar" id="sw-prj-list">
+                        <div class="py-20 text-center text-slate-400 italic text-xs animate-pulse">Cargando proyectos...</div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '500px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { container:'backdrop-blur-sm', popup:'rounded-[2.5rem] border-none shadow-2xl' },
+        didOpen: async () => {
+            try {
+                const res = await fetch(`<?= BASE_URL ?>/api/proyectos.php`);
+                const j   = await res.json();
+                const data = j.data || [];
+                const list = document.getElementById('sw-prj-list');
+                
+                if (!data.length) { list.innerHTML = '<div class="py-20 text-center text-slate-400">No hay proyectos registrados.</div>'; return; }
+                
+                list.innerHTML = `
+                    <table class="w-full text-left text-xs border-collapse divide-y divide-slate-100">
+                        <tbody class="bg-white">
+                            ${data.map(p => `
+                                <tr class="hover:bg-indigo-50/50 transition-all cursor-pointer group" onclick="selectProyecto(${rowIdx}, ${p.id}, '${esc(p.nombre)}')">
+                                    <td class="px-6 py-4 font-mono font-black text-indigo-600 w-24 border-r border-slate-50">${p.codigo}</td>
+                                    <td class="px-6 py-4 font-bold text-slate-700 leading-tight">${p.nombre}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch(e) { document.getElementById('sw-prj-list').innerHTML = '<div class="py-20 text-center text-red-500 italic">Error de carga</div>'; }
+        }
+    });
+}
+
+function selectProyecto(idx, id, nombre) {
+    lineas[idx].proyecto_id     = id;
+    lineas[idx].proyecto_nombre = nombre;
+    const row = document.getElementById(`row-${idx}`);
+    if (row) row.querySelector('.cell-proyecto').value = nombre;
+    Swal.close();
+}
+
+async function abrirCatalogoCECO(rowIdx) {
+    Swal.fire({
+        title: '<div class="text-xl font-black text-slate-800 tracking-tight">🏢 Centros de Costo</div>',
+        html: `
+            <div class="text-left space-y-4 p-2">
+                <div class="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden shadow-inner">
+                    <div class="max-h-[50vh] overflow-y-auto no-scrollbar" id="sw-ceco-list">
+                        <div class="py-20 text-center text-slate-400 italic text-xs animate-pulse">Cargando CECOs...</div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '500px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { container:'backdrop-blur-sm', popup:'rounded-[2.5rem] border-none shadow-2xl' },
+        didOpen: async () => {
+            try {
+                const res = await fetch(`<?= BASE_URL ?>/api/cecos.php`);
+                const j   = await res.json();
+                const data = j.data || [];
+                const list = document.getElementById('sw-ceco-list');
+                
+                if (!data.length) { list.innerHTML = '<div class="py-20 text-center text-slate-400">No hay centros de costo registrados.</div>'; return; }
+                
+                list.innerHTML = `
+                    <table class="w-full text-left text-xs border-collapse divide-y divide-slate-100">
+                        <tbody class="bg-white">
+                            ${data.map(c => `
+                                <tr class="hover:bg-rose-50/50 transition-all cursor-pointer group" onclick="selectCECO(${rowIdx}, ${c.id}, '${esc(c.nombre)}')">
+                                    <td class="px-6 py-4 font-mono font-black text-rose-600 w-24 border-r border-slate-50">${c.codigo}</td>
+                                    <td class="px-6 py-4 font-bold text-slate-700 leading-tight">${c.nombre}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch(e) { document.getElementById('sw-ceco-list').innerHTML = '<div class="py-20 text-center text-red-500 italic">Error de carga</div>'; }
+        }
+    });
+}
+
+function selectCECO(idx, id, nombre) {
+    lineas[idx].ceco_id     = id;
+    lineas[idx].ceco_nombre = nombre;
+    const row = document.getElementById(`row-${idx}`);
+    if (row) row.querySelector('.cell-ceco').value = nombre;
+    Swal.close();
+}
+
+async function abrirCatalogoDocTipo(rowIdx) {
+    const tipos = [
+        {c:'FAC', n:'Factura'}, {c:'REC', n:'Recibo'}, {c:'NC', n:'Nota de Crédito'},
+        {c:'ND', n:'Nota de Débito'}, {c:'COM', n:'Comprobante'}, {c:'EGR', n:'Egreso'},
+        {c:'ING', n:'Ingreso'}, {c:'OTR', n:'Otro'}
+    ];
+
+    Swal.fire({
+        title: '<div class="text-xl font-black text-slate-800 tracking-tight">📑 Tipo de Documento</div>',
+        html: `
+            <div class="p-2">
+                <div class="grid grid-cols-2 gap-3">
+                    ${tipos.map(t => `
+                        <button onclick="selectDocTipo(${rowIdx}, '${t.c}')" 
+                                class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-900 hover:text-white transition-all group border border-slate-100">
+                            <span class="font-mono font-black text-blue-600 group-hover:text-blue-400 text-sm">${t.c}</span>
+                            <span class="font-bold text-xs opacity-70">${t.n}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `,
+        width: '450px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { container:'backdrop-blur-sm', popup:'rounded-[2.5rem] border-none shadow-2xl' }
+    });
+}
+
+function selectDocTipo(idx, cod) {
+    lineas[idx].doc_cruce_tipo = cod;
+    const row = document.getElementById(`row-${idx}`);
+    if (row) row.querySelector('.cell-doc-tipo').value = cod;
+    Swal.close();
 }
 </script>
 </body>

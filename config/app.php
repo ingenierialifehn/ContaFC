@@ -12,7 +12,7 @@ define('BASE_URL', '/contafc');
 
 // ─── Base de Datos ────────────────────────────────────────────────────────
 // Cambia 'mysql' por 'localhost' o el nombre del contenedor MySQL si difiere
-define('DB_HOST',     getenv('DB_HOST')     ?: 'db');
+define('DB_HOST',     getenv('DB_HOST')     ?: 'contafc_db');
 define('DB_PORT',     (int)(getenv('DB_PORT')  ?: 3306));
 define('DB_NAME',     getenv('DB_NAME')     ?: 'contafc');
 define('DB_USER',     getenv('DB_USER')     ?: 'root');

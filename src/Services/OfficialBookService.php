@@ -77,6 +77,30 @@ class OfficialBookService
     }
 
     /**
+     * Obtiene el Libro de Inventarios y Balances para un año determinado
+     */
+    public function getInventoryBalances(int $empresaId, int $year): array
+    {
+        $sql = "SELECT p.id as cuenta_id, p.codigo, p.nombre, p.naturaleza,
+                       (SELECT COALESCE(SUM(debito - credito), 0) FROM asientos a2 
+                        JOIN comprobantes c2 ON a2.comprobante_id = c2.id 
+                        WHERE a2.cuenta_id = p.id AND YEAR(c2.fecha) < :y1 AND c2.estado = 'registrado') as saldo_anterior,
+                       SUM(a.debito) as debitos_anio,
+                       SUM(a.credito) as creditos_anio
+                FROM puc_cuentas p
+                LEFT JOIN asientos a ON p.id = a.cuenta_id
+                LEFT JOIN comprobantes c ON a.comprobante_id = c.id AND YEAR(c.fecha) = :y2 AND c.estado = 'registrado'
+                WHERE p.empresa_id = :eid AND p.nivel <= 4
+                GROUP BY p.id
+                HAVING (saldo_anterior <> 0 OR debitos_anio <> 0 OR creditos_anio <> 0)
+                ORDER BY p.codigo ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':eid' => $empresaId, ':y1' => $year, ':y2' => $year]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Retorna y actualiza el folio de un libro oficial
      */
     public function getFolioState(int $empresaId, string $tipo): array

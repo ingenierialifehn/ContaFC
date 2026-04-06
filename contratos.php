@@ -85,7 +85,7 @@ $activeNav = 'contratos';
                 <div class="relative">
                    <input type="text" id="busc-clie-contr" placeholder="Buscar cliente..." oninput="buscarClie(this.value)"
                           class="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold">
-                   <div id="res-busc-clie" class="absolute left-0 right-0 bg-white shadow-2xl border z-20 hidden"></div>
+                    <div id="res-busc-clie" class="absolute left-0 right-0 top-full mt-2 bg-white shadow-2xl border border-slate-100 z-50 rounded-2xl max-h-60 overflow-y-auto hidden"></div>
                    <input type="hidden" id="c_cliente_id">
                 </div>
             </div>
@@ -152,7 +152,7 @@ async function cargarContratos() {
                 <span class="px-3 py-1 bg-blue-50 text-honduras text-[9px] font-black rounded-lg border border-blue-100">DÍA ${c.dia_facturacion}</span>
             </td>
             <td class="px-8 py-6 text-center">
-                <button class="text-slate-300 hover:text-rose-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                <button onclick="eliminarContrato(${c.id})" class="text-slate-300 hover:text-rose-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
             </td>
         </tr>
     `).join('');
@@ -165,19 +165,31 @@ async function cargarServicios() {
     selects.innerHTML = (json.data || []).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
 }
 
-function nuevoContrato() { document.getElementById('modal-contrato').classList.remove('hidden'); }
+function nuevoContrato() { 
+    document.getElementById('form-contrato').reset();
+    document.getElementById('c_cliente_id').value = '';
+    document.getElementById('modal-contrato').classList.remove('hidden'); 
+}
 function cerrarC() { document.getElementById('modal-contrato').classList.add('hidden'); }
 
 async function buscarClie(q) {
-    if (q.length < 3) { document.getElementById('res-busc-clie').classList.add('hidden'); return; }
+    const caja = document.getElementById('res-busc-clie');
+    if (q.length < 1) { caja.classList.add('hidden'); return; }
     const res = await fetch(`api/terceros.php?q=${q}&tipo=cliente`);
     const json = await res.json();
-    const caja = document.getElementById('res-busc-clie');
-    caja.innerHTML = (json.data || []).map(t => `
-        <div onclick="selecClie(${t.id}, '${t.razon_social}')" class="px-6 py-3 hover:bg-slate-50 cursor-pointer border-b text-xs">
-            <span class="font-black">${t.razon_social}</span>
-        </div>
-    `).join('');
+    const data = json.data || [];
+    
+    if (data.length === 0) {
+        caja.innerHTML = '<div class="px-6 py-4 text-slate-400 italic">No se encontraron clientes...</div>';
+    } else {
+        caja.innerHTML = data.map(t => `
+            <div onclick="selecClie(${t.id}, '${t.razon_social || t.nombre}')" 
+                 class="px-6 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 text-xs flex justify-between items-center group">
+                <span class="font-black text-slate-700 group-hover:text-honduras transition-colors">${t.razon_social || t.nombre}</span>
+                <span class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">${t.nit_cc}</span>
+            </div>
+        `).join('');
+    }
     caja.classList.remove('hidden');
 }
 
@@ -185,6 +197,25 @@ function selecClie(id, nom) {
     document.getElementById('c_cliente_id').value = id;
     document.getElementById('busc-clie-contr').value = nom;
     document.getElementById('res-busc-clie').classList.add('hidden');
+}
+
+// ELIMINAR
+async function eliminarContrato(id) {
+    const result = await Swal.fire({
+        title: '¿Eliminar contrato?',
+        text: "Se detendrá la facturación recurrente para este cliente.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        confirmButtonText: 'Sí, eliminar'
+    });
+    if (result.isConfirmed) {
+        const res = await fetch(`api/com-contratos.php?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            Swal.fire('Eliminado', 'El contrato ha sido removido.', 'success');
+            cargarContratos();
+        }
+    }
 }
 
 document.getElementById('form-contrato').addEventListener('submit', async (e) => {
@@ -197,8 +228,18 @@ document.getElementById('form-contrato').addEventListener('submit', async (e) =>
         fecha_inicio: document.getElementById('c_inicio').value
     };
 
-    const res = await fetch('api/com-contratos.php', { method: 'POST', body: JSON.stringify(data) });
-    if (res.ok) { Swal.fire('Guardado', 'Suscripción activa para facturación masiva.', 'success'); cerrarC(); cargarContratos(); }
+    const res = await fetch('api/com-contratos.php', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data) 
+    });
+    if (res.ok) { 
+        Swal.fire('Guardado', 'Suscripción activa para facturación masiva.', 'success'); 
+        cerrarC(); 
+        cargarContratos(); 
+    } else {
+        Swal.fire('Error', 'No se pudo guardar el contrato.', 'error');
+    }
 });
 
 async function generarMasivo() {
@@ -215,13 +256,18 @@ async function generarMasivo() {
 
     Swal.fire({ title: 'Procesando...', text: 'Emitiendo facturas SAR masivas', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const res = await fetch('api/com-contratos-masivo.php', { method: 'POST' });
-    const json = await res.json();
+    try {
+        const res = await fetch('api/com-contratos-masivo.php', { method: 'POST' });
+        const json = await res.json();
 
-    if (json.success) {
-        Swal.fire('Proceso Completado', `Se generaron ${json.count} facturas automáticamente.`, 'success');
-    } else {
-        Swal.fire('Error', json.error, 'error');
+        if (json.success) {
+            Swal.fire('Proceso Completado', `Se generaron ${json.count} facturas automáticamente.`, 'success');
+            cargarContratos();
+        } else {
+            Swal.fire('Error', json.error || 'Error desconocido', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Fallo en la comunicación con el servidor. Verifique si la tabla existe.', 'error');
     }
 }
 </script>

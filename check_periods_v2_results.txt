@@ -1,0 +1,154 @@
+--- PERIODOS PARA EMPRESA 1 ---
+Array
+(
+    [0] => Array
+        (
+            [id] => 1
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 1
+            [estado] => cerrado
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [1] => Array
+        (
+            [id] => 2
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 2
+            [estado] => cerrado
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [2] => Array
+        (
+            [id] => 3
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 3
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [3] => Array
+        (
+            [id] => 4
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 4
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [4] => Array
+        (
+            [id] => 5
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 5
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [5] => Array
+        (
+            [id] => 6
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 6
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [6] => Array
+        (
+            [id] => 7
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 7
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [7] => Array
+        (
+            [id] => 8
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 8
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [8] => Array
+        (
+            [id] => 9
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 9
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [9] => Array
+        (
+            [id] => 10
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 10
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [10] => Array
+        (
+            [id] => 11
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 11
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [11] => Array
+        (
+            [id] => 12
+            [empresa_id] => 1
+            [anio] => 2026
+            [mes] => 12
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+)
+
+--- MIN YEAR EN COMPROBANTES ---
+Array
+(
+    [min_year] => 2023
+)
+
+--- COMPROBANTES POR AÑO/MES ---
+Array
+(
+    [0] => Array
+        (
+            [anio] => 2023
+            [mes] => 1
+            [cant] => 1
+        )
+
+)

@@ -6,7 +6,7 @@ use ContaFC\Core\Auth;
 use ContaFC\Core\Database;
 
 if (Auth::check()) {
-    header('Location: ' . BASE_URL . '/dashboard.php');
+    header('Location: ' . Auth::getFirstAccessibleUrl());
     exit;
 }
 
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (count($empresas) === 1) {
                 // Login Directo
                 Auth::login($user_data, (int)$empresas[0]['id']);
-                header('Location: ' . BASE_URL . '/dashboard.php');
+                header('Location: ' . Auth::getFirstAccessibleUrl());
                 exit;
             } else {
                 // Múltiples Empresas (Mantenemos selector profesional pero simplificado)
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $eid = (int)($_POST['empresa_id'] ?? 0);
             if (Auth::login($_SESSION['pending_user'], $eid)) {
                 unset($_SESSION['pending_user']);
-                header('Location: ' . BASE_URL . '/dashboard.php');
+                header('Location: ' . Auth::getFirstAccessibleUrl());
                 exit;
             }
         }

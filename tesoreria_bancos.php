@@ -76,7 +76,7 @@ $activeNav = 'tesoreria';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-7xl mx-auto flex flex-col gap-8">
+        <div class="flex flex-col gap-8">
             <!-- Bancos Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="bancos-grid">
                 <!-- Se cargará via JS -->

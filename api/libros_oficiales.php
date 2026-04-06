@@ -22,6 +22,8 @@ if ($tipo === 'DIARIO') {
     $data = $service->getJournal($eid, $pid);
 } elseif ($tipo === 'MAYOR') {
     $data = $service->getLedger($eid, $pid);
+} elseif ($tipo === 'INVENTARIOS') {
+    $data = $service->getInventoryBalances($eid, (int)$periodo['anio']);
 } else {
     die("Tipo de libro no soportado aún.");
 }
@@ -56,9 +58,9 @@ if ($tipo === 'DIARIO') {
         
         <div class="header">
             <h1><?= $empresa['nombre'] ?></h1>
-            <p>RTN: <?= $empresa['rtn'] ?></p>
-            <p>LIBRO OFICIAL: <?= $tipo ?></p>
-            <p>CORRESPONDIENTE AL MES DE: <?= $periodo['mes'] ?> / <?= $periodo['anio'] ?></p>
+            <p>RTN: <?= $empresa['nit'] ?? '—' ?></p>
+            <p>LIBRO OFICIAL: <?= $tipo === 'INVENTARIOS' ? 'INVENTARIOS Y BALANCES' : $tipo ?></p>
+            <p>PERIODO: <?= $tipo === 'INVENTARIOS' ? "AÑO FISCAL {$periodo['anio']}" : "{$periodo['mes']} / {$periodo['anio']}" ?></p>
         </div>
 
         <table>
@@ -96,7 +98,7 @@ if ($tipo === 'DIARIO') {
                     <td class="num"><?= number_format($totalH, 2) ?></td>
                 </tr>
             </tbody>
-            <?php elseif ($tipo === 'MAYOR'): ?>
+            <?php elseif ($tipo === 'MAYOR' || $tipo === 'INVENTARIOS'): ?>
             <thead>
                 <tr>
                     <th>CÓDIGO</th>
@@ -110,14 +112,16 @@ if ($tipo === 'DIARIO') {
             <tbody>
                 <?php 
                 foreach ($data as $r): 
-                    $saldo = (float)$r['saldo_anterior'] + (float)$r['debitos_mes'] - (float)$r['creditos_mes'];
+                    $deb = isset($r['debitos_mes']) ? (float)$r['debitos_mes'] : (float)$r['debitos_anio'];
+                    $cre = isset($r['creditos_mes']) ? (float)$r['creditos_mes'] : (float)$r['creditos_anio'];
+                    $saldo = (float)$r['saldo_anterior'] + $deb - $cre;
                 ?>
                 <tr>
                     <td align="center"><?= $r['codigo'] ?></td>
                     <td><?= $r['nombre'] ?></td>
                     <td class="num"><?= number_format((float)$r['saldo_anterior'], 2) ?></td>
-                    <td class="num"><?= number_format((float)$r['debitos_mes'], 2) ?></td>
-                    <td class="num"><?= number_format((float)$r['creditos_mes'], 2) ?></td>
+                    <td class="num"><?= number_format($deb, 2) ?></td>
+                    <td class="num"><?= number_format($cre, 2) ?></td>
                     <td class="num"><?= number_format($saldo, 2) ?></td>
                 </tr>
                 <?php endforeach; ?>

@@ -24,8 +24,8 @@ try {
 
         // 1. Crear el Comprobante
         $stmtComp = $db->prepare(
-            "INSERT INTO comprobantes (empresa_id, tipo_id, numero, fecha, tercero_id, observaciones, usuario_id, estado)
-             VALUES (:eid, :tid, :num, :fec, :ter, :obs, :uid, 'registrado')"
+            "INSERT INTO comprobantes (empresa_id, tipo_comp_id, numero, fecha, tercero_id, observaciones, periodo_id, usuario_id, estado)
+             VALUES (:eid, :tid, :num, :fec, :ter, :obs, :pid, :uid, 'registrado')"
         );
         
         // Generar número automático (ejemplo simple: max+1 por tipo y empresa)
@@ -33,11 +33,17 @@ try {
         $numStmt->execute([':eid' => $eid, ':tid' => $body['tipo_comp_id']]);
         $numero = $numStmt->fetchColumn();
 
+        // Buscar periodo activo para la fecha
+        $periodoStmt = $db->prepare("SELECT id FROM periodos WHERE empresa_id = :eid AND anio = :a AND mes = :m LIMIT 1");
+        $periodoStmt->execute([':eid' => $eid, ':a' => date('Y', strtotime($body['fecha'])), ':m' => (int)date('m', strtotime($body['fecha']))]);
+        $pid = $periodoStmt->fetchColumn() ?: 1;
+
         $stmtComp->execute([
             ':eid' => $eid,
             ':tid' => $body['tipo_comp_id'],
             ':num' => $numero,
             ':fec' => $body['fecha'],
+            ':pid' => $pid,
             ':ter' => $body['tercero_id'] ?: null,
             ':obs' => $body['observaciones'] ?: null,
             ':uid' => $uid
@@ -59,7 +65,7 @@ try {
                 ':ter' => $l['tercero_id'] ?: null,
                 ':des' => $l['descripcion'] ?: null,
                 ':ref' => $l['documento_referencia'] ?? null,
-                ':fec' => $body['fecha']
+                ':fec' => $l['fecha'] ?? $body['fecha']
             ]);
             
             // 3. Afectar Cuentas por Cobrar/Pagar si aplica (Opcional en esta fase, pero planeado)
@@ -74,10 +80,10 @@ try {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
         if ($id) {
             $stmt = $db->prepare(
-                "SELECT c.*, t.nombre as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo
+                "SELECT c.*, t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo
                  FROM comprobantes c
                  LEFT JOIN terceros t ON c.tercero_id = t.id
-                 JOIN tipos_comprobante tc ON c.tipo_id = tc.id
+                 JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
                  WHERE c.id = :id AND c.empresa_id = :eid"
             );
             $stmt->execute([':id' => $id, ':eid' => $eid]);
@@ -86,7 +92,7 @@ try {
             if (!$comp) throw new Exception("Comprobante no encontrado.");
 
             $stmtL = $db->prepare(
-                "SELECT a.*, cu.codigo as cuenta_codigo, cu.nombre as cuenta_nombre, t.nombre as tercero_nombre
+                "SELECT a.*, cu.codigo as cuenta_codigo, cu.nombre as cuenta_nombre, t.razon_social as tercero_nombre
                  FROM asientos a
                  JOIN puc_cuentas cu ON a.cuenta_id = cu.id
                  LEFT JOIN terceros t ON a.tercero_id = t.id
@@ -98,22 +104,49 @@ try {
             echo json_encode($comp);
         } else {
             // Listado de comprobantes
-            $desde = $_GET['desde'] ?? date('Y-m-01');
-            $hasta = $_GET['hasta'] ?? date('Y-m-d');
-            $estado= $_GET['estado'] ?? 'registrado';
+            $desde  = $_GET['desde'] ?? date('Y-m-01');
+            $hasta  = $_GET['hasta'] ?? date('Y-m-d');
+            $estado = $_GET['estado'] ?? 'registrado';
+            $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+            $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+            $offset = ($page - 1) * $limit;
             
-            $stmt = $db->prepare(
-                "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.nombre as tercero,
-                        (SELECT SUM(debito) FROM asientos WHERE comprobante_id = c.id) as total_debitos,
-                        (SELECT SUM(credito) FROM asientos WHERE comprobante_id = c.id) as total_creditos
-                 FROM comprobantes c
-                 JOIN tipos_comprobante tc ON c.tipo_id = tc.id
-                 LEFT JOIN terceros t ON c.tercero_id = t.id
-                 WHERE c.empresa_id = :eid AND c.fecha BETWEEN :d AND :h AND c.estado = :e
-                 ORDER BY c.fecha DESC, c.numero DESC"
-            );
-            $stmt->execute([':eid' => $eid, ':d' => $desde, ':h' => $hasta, ':e' => $estado]);
-            echo json_encode(['data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            $stmtCount = $db->prepare("SELECT COUNT(DISTINCT c.id) 
+                                       FROM comprobantes c 
+                                       JOIN asientos a ON c.id = a.comprobante_id 
+                                       WHERE c.empresa_id = :eid AND a.fecha BETWEEN :d AND :h AND c.estado = :e");
+            $stmtCount->execute([':eid' => $eid, ':d' => $desde, ':h' => $hasta, ':e' => $estado]);
+            $totalRecords = (int)$stmtCount->fetchColumn();
+
+            // Consulta optimizada para traer totales pre-calculados en la tabla comprobantes
+            $sql = "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.razon_social as tercero,
+                           (SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id) AS fecha_asiento
+                    FROM comprobantes c
+                    JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
+                    LEFT JOIN terceros t ON c.tercero_id = t.id
+                    WHERE c.empresa_id = :eid AND c.estado = :e
+                      AND EXISTS (SELECT 1 FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha BETWEEN :d AND :h)
+                    ORDER BY fecha_asiento DESC, c.id DESC
+                    LIMIT :limit OFFSET :offset";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->bindValue(':eid', $eid, PDO::PARAM_INT);
+            $stmt->bindValue(':d', $desde);
+            $stmt->bindValue(':h', $hasta);
+            $stmt->bindValue(':e', $estado);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+
+            echo json_encode([
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'pagination' => [
+                    'total' => $totalRecords,
+                    'page' => $page,
+                    'limit' => $limit,
+                    'pages' => ceil($totalRecords / $limit)
+                ]
+            ]);
         }
     }
 } catch (Throwable $e) {

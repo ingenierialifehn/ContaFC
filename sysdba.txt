@@ -1,0 +1,11 @@
+# Password for firebird SYSDBA user
+#
+# You may want to use the following command for changing it:
+#   dpkg-reconfigure firebird3.0-server
+#
+# If you change the password manually with isql-fb or gsec, please update it
+# here too. Keeping this file in sync with the security database is useful for
+# any database maintenance scripts that need to connect as SYSDBA.
+
+ISC_USER=sysdba
+ISC_PASSWORD="3feae7f9"

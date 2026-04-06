@@ -1,0 +1,41 @@
+--- LISTA DE EMPRESAS --- 
+Array
+(
+    [0] => Array
+        (
+            [id] => 1
+            [nombre] => Ingeniería LIFE S.A.S.
+        )
+
+)
+
+--- CONTEO DE PERIODOS POR EMPRESA --- 
+Array
+(
+    [0] => Array
+        (
+            [empresa_id] => 1
+            [anio] => 2023
+            [m_count] => 1
+        )
+
+    [1] => Array
+        (
+            [empresa_id] => 1
+            [anio] => 2026
+            [m_count] => 12
+        )
+
+)
+
+--- CONTEO DE COMPROBANTES POR EMPRESA --- 
+Array
+(
+    [0] => Array
+        (
+            [empresa_id] => 1
+            [anio] => 2023
+            [c_count] => 1
+        )
+
+)

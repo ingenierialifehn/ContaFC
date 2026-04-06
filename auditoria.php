@@ -81,7 +81,7 @@ $activeNav = 'auditoria';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-7xl mx-auto flex flex-col gap-8">
+        <div class="flex flex-col gap-8">
             
             <!-- Filtros de Auditoría -->
             <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">

@@ -138,7 +138,10 @@ final class Auth
         if (($user['rol'] ?? '') === 'admin') return true;
         
         $permsRaw = $user['permisos'] ?? '{}';
+        if (empty($permsRaw) || $permsRaw === 'null') $permsRaw = '{}';
+        
         $perms = is_string($permsRaw) ? json_decode($permsRaw, true) : $permsRaw;
+        if (!is_array($perms)) $perms = [];
         
         $mPerms = $perms[$modulo] ?? null;
         if ($mPerms === null) return false;
@@ -148,16 +151,60 @@ final class Auth
             return (bool)($mPerms[$accion] ?? false);
         }
 
-        // Retrocompatibilidad: Si es booleano simple, permitimos acceso 'r'
-        // Si no es un array, se asume que true significa acceso total or read access.
+        // Retrocompatibilidad
         return (bool)$mPerms;
+    }
+
+    public static function getFirstAccessibleUrl(): string
+    {
+        $user = self::user();
+        if (!$user) return BASE_URL . '/login.php';
+        if (($user['rol'] ?? '') === 'admin') return BASE_URL . '/dashboard.php';
+
+        // Orden de prioridad para aterrizar (mismos keys que sidebar)
+        $prioridad = [
+            'dashboard'     => 'dashboard.php',
+            'asiento'       => 'asiento.php',
+            'pos'           => 'pos.php',
+            'reportes'      => 'reportes.php',
+            'comprobantes'  => 'comprobantes.php',
+            'factura'       => 'factura.php',
+            'terceros'      => 'terceros.php',
+            'productos'     => 'productos.php'
+        ];
+
+        foreach ($prioridad as $key => $file) {
+            if (self::canAccess($key, 'r')) return BASE_URL . '/' . $file;
+        }
+
+        // Si no tiene nada específico, buscar en todo el JSON de permisos
+        $permsRaw = $user['permisos'] ?? '{}';
+        $perms = is_string($permsRaw) ? json_decode($permsRaw, true) : $permsRaw;
+        if (is_array($perms)) {
+            foreach ($perms as $modulo => $p) {
+                if (self::canAccess($modulo, 'r')) {
+                    // Mapeo simple de nombre de modulo a .php
+                    return BASE_URL . '/' . $modulo . '.php';
+                }
+            }
+        }
+
+        return BASE_URL . '/dashboard.php'; 
     }
 
     public static function requirePermiso(string $modulo, string $accion = 'r'): void
     {
         self::requireAuth();
         if (!self::canAccess($modulo, $accion)) {
-            header('Location: ' . BASE_URL . '/dashboard.php?error=permiso_denied&modulo='.$modulo.'&accion='.$accion);
+            $dest = self::getFirstAccessibleUrl();
+            $currentUrl = BASE_URL . '/' . basename($_SERVER['PHP_SELF']);
+            
+            // Evitar bucle infinito si ya estamos en el destino
+            if (strpos($dest, basename($_SERVER['PHP_SELF'])) !== false) {
+                 die("Acceso Denegado: No tienes permisos para este módulo y no hay una alternativa válida asignada.");
+            }
+            
+            header('Location: ' . $dest . '?error=permiso_denied&modulo='.$modulo.'&accion='.$accion);
             exit;
         }
     }

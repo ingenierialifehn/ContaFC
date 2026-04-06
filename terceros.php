@@ -145,13 +145,14 @@ async function cargarTerceros() {
     const count= document.getElementById('t-count');
 
     try {
-        const res = await fetch(`<?= BASE_URL ?>/api/terceros.php?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`<?= BASE_URL ?>/api/terceros.php?q=${encodeURIComponent(q)}&tipo=${encodeURIComponent(tipo)}`);
         const json = await res.json();
         tercerosCache = json.data || [];
         
         let data = [...tercerosCache];
+        // Client-side filtering as fallback or extra layer
         if (tipo) {
-            data = data.filter(r => r.tipo_tercero.includes(tipo));
+            data = data.filter(r => r.tipo_tercero && String(r.tipo_tercero).toLowerCase().includes(tipo.toLowerCase()));
         }
 
         count.innerText = data.length.toString();
@@ -177,7 +178,7 @@ async function cargarTerceros() {
                 <div>
                     <div class="flex items-center gap-4 mb-5">
                         <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center text-slate-400 font-extrabold text-2xl border border-slate-200 uppercase shadow-inner">
-                            ${r.nombre.charAt(0)}
+                            ${(r.nombre || '?').charAt(0)}
                         </div>
                         <div class="flex-1 min-w-0">
                             <h3 class="font-bold text-slate-800 text-base leading-tight truncate pr-16" title="${r.nombre}">${r.nombre}</h3>
@@ -189,7 +190,7 @@ async function cargarTerceros() {
                     </div>
 
                     <div class="flex flex-wrap gap-2 mb-6">
-                        ${r.tipo_tercero.split(',').map(t => `
+                        ${(r.tipo_tercero || '').split(',').filter(t => t.trim() !== '').map(t => `
                             <span class="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${tagColor(t)}">
                                 ${t === 'cliente' ? 'Cliente' : t === 'proveedor' ? 'Proveedor' : t}
                             </span>

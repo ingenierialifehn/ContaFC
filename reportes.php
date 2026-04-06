@@ -42,10 +42,17 @@ $titulo = $titulosReporte[$tipoReporte] ?? 'Reporte';
         .rep-row-grupo{background:#e8f0fe;color:#1e3a5f;font-weight:600;font-size:.8rem;}
         .rep-row-cuenta{background:#fff;color:#334155;font-size:.78rem;}
         .rep-row-subcuenta{background:#f8fafc;color:#475569;font-size:.76rem;padding-left:2rem!important;}
-        @media print { aside,header,#filter-bar,#btn-print{display:none!important;} body{background:#fff;} main{padding:0!important;} }
+        
+        @media print { 
+            aside, header, #filter-bar, #btn-print { display: none !important; } 
+            body, html { height: auto !important; overflow: visible !important; background: #fff !important; } 
+            main { height: auto !important; overflow: visible !important; padding: 0 !important; width: 100% !important; display: block !important; position: static !important; }
+            #reporte-container { overflow: visible !important; height: auto !important; border: none !important; box-shadow: none !important; width: 100% !important; margin: 0 !important; }
+            .flex-1 { flex: none !important; }
+        }
     </style>
 </head>
-<body class="h-full font-sans flex">
+<body class="h-full font-sans flex text-slate-800">
 <?php
 $mapNav = ['balance_comprobacion'=>'bc','balance_general'=>'bg','estado_resultados'=>'pyg','auxiliar'=>'auxiliar'];
 $activeNav = $mapNav[$tipoReporte] ?? '';
@@ -85,7 +92,7 @@ require __DIR__ . '/partials/sidebar.php';
         </div>
         <?php endif; ?>
         <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-500 flex items-center gap-1.5">
+            <label class="text-xs text-slate-500 flex items-center gap-1.5 cursor-pointer">
                 <input id="f-solo-mov" type="checkbox" class="rounded">
                 Solo cuentas con movimiento
             </label>
@@ -98,7 +105,7 @@ require __DIR__ . '/partials/sidebar.php';
 
     <!-- Tabla de reporte -->
     <div class="flex-1 px-4 py-4 overflow-auto">
-        <div id="reporte-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div id="reporte-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:overflow-visible print:border-none print:shadow-none">
             <div class="px-6 py-16 text-center text-slate-400">
                 <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <p class="font-medium">Seleccione el rango de fechas y presione <b>Generar</b></p>
@@ -120,78 +127,22 @@ async function generarReporte() {
     let url = `<?= BASE_URL ?>/api/reportes.php?tipo=${TIPO_REP}&desde=${desde}&hasta=${hasta}&solo_mov=${solo}&corte=${hasta}&cuenta=${cuenta}`;
 
     const cont = document.getElementById('reporte-container');
-    cont.innerHTML = '<div class="px-6 py-16 text-center text-slate-400">Generando reporte...</div>';
+    cont.innerHTML = '<div class="px-6 py-16 text-center text-slate-400 italic">Generando reporte, espere por favor...</div>';
 
-    const res  = await fetch(url);
-    const json = await res.json();
-    if (!res.ok) { cont.innerHTML = `<div class="px-6 py-10 text-center text-red-500">${json.error||'Error'}</div>`; return; }
+    try {
+        const res  = await fetch(url);
+        const json = await res.json();
+        if (!res.ok) { cont.innerHTML = `<div class="px-6 py-10 text-center text-red-500 font-bold">${json.error||'Error'}</div>`; return; }
 
-    const data = json.data || [];
-
-    if (TIPO_REP === 'balance_comprobacion') renderBalanceComprobacion(data, cont, desde, hasta);
-    else if (TIPO_REP === 'balance_general') renderBalanceGeneral(data, cont, hasta);
-    else if (TIPO_REP === 'estado_resultados') renderEstadoResultados(data, cont, desde, hasta);
-    else if (TIPO_REP === 'auxiliar') renderAuxiliar(data, cont, cuenta, desde, hasta);
-    else if (TIPO_REP === 'isv_report') renderISVReport(data, cont, desde, hasta);
-}
-
-function renderISVReport(data, cont, desde, hasta) {
-    if (!data.length) { cont.innerHTML = '<div class="p-10 text-center text-slate-400 font-bold uppercase tracking-widest italic">Sin transacciones fiscales de ISV registradas en este período.</div>'; return; }
-    
-    let totalImp = 0;
-    const items = data.map(r => {
-        const imp = parseFloat(r.debito > 0 ? r.debito : r.credito);
-        totalImp += imp;
-        // Estimación de base (Honduras)
-        const tasa = r.descripcion.includes('18%') ? 0.18 : 0.15;
-        const base = imp / tasa;
-        
-        return `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-mono text-[10px] text-slate-500">${r.fecha}</td>
-            <td class="px-4 py-3">
-                <div class="font-black text-slate-800 tracking-tight">${r.tipo}-${r.numero}</div>
-                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-tight">${r.rtn||'SIN RTN'}</div>
-            </td>
-            <td class="px-4 py-3 text-slate-600 font-medium truncate max-w-[200px]">${r.tercero||'Público en General'}</td>
-            <td class="px-4 py-3 text-right font-mono font-bold text-slate-400">${fmt(base)}</td>
-            <td class="px-4 py-3 text-right font-mono font-black text-honduras">${fmt(imp)}</td>
-            <td class="px-4 py-3 text-[10px] items-center">
-                <span class="bg-blue-50 text-honduras px-2 py-1 rounded-lg border border-blue-100 font-black">${(tasa*100)}%</span>
-            </td>
-        </tr>`;
-    }).join('');
-
-    const colorHeader = 'bg-honduras';
-
-    cont.innerHTML = `
-        <div class="p-8 border-b border-slate-100 bg-slate-50/50">
-            <h2 class="text-2xl font-black text-slate-800 tracking-tight text-center">Informe Detallado de ISV (SAR)</h2>
-            <p class="text-sm text-center text-slate-500 font-medium mt-1 uppercase tracking-widest">${EMPRESA_NOMBRE} · ${desde} a ${hasta}</p>
-        </div>
-        <div class="overflow-x-auto p-4">
-        <table class="w-full text-xs bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-            <thead>
-                <tr class="${colorHeader} text-white uppercase tracking-widest text-[10px] font-black">
-                    <th class="px-4 py-4 text-left">Emisión</th>
-                    <th class="px-4 py-4 text-left">Documento / RTN</th>
-                    <th class="px-4 py-4 text-left">Beneficiario</th>
-                    <th class="px-4 py-4 text-right">Base Imponible (Est.)</th>
-                    <th class="px-4 py-4 text-right">ISV Liquidado</th>
-                    <th class="px-4 py-4 text-center">Tasa</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50 italic">
-                ${items}
-            </tbody>
-            <tfoot class="bg-slate-900 text-white font-black text-sm border-t-2 border-slate-800">
-                <tr>
-                    <td colspan="4" class="px-6 py-4 text-right text-[10px] uppercase tracking-widest opacity-60">Total Impuesto Periodo</td>
-                    <td class="px-6 py-4 text-right font-mono text-lg">${fmt(totalImp)}</td>
-                    <td></td>
-                </tr>
-            </tfoot>
-        </table>
-        </div>`;
+        const data = json.data || [];
+        if (TIPO_REP === 'balance_comprobacion') renderBalanceComprobacion(data, cont, desde, hasta);
+        else if (TIPO_REP === 'balance_general') renderBalanceGeneral(data, cont, hasta);
+        else if (TIPO_REP === 'estado_resultados') renderEstadoResultados(data, cont, desde, hasta);
+        else if (TIPO_REP === 'auxiliar') renderAuxiliar(data, cont, cuenta, desde, hasta);
+        else if (TIPO_REP === 'isv_report') renderISVReport(data, cont, desde, hasta);
+    } catch (err) {
+        cont.innerHTML = `<div class="px-6 py-10 text-center text-red-500 font-bold">Error de comunicación.</div>`;
+    }
 }
 
 function fmt(v) {
@@ -216,11 +167,12 @@ function renderBalanceComprobacion(data, cont, desde, hasta) {
     }).join('');
 
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100">
-            <div class="text-lg font-bold text-slate-800 text-center">Balance de Comprobación</div>
-            <div class="text-sm text-center text-slate-500">${EMPRESA_NOMBRE} · Del ${desde} al ${hasta}</div>
+        <div class="p-5 border-b border-slate-100 text-center">
+            <div class="text-lg font-bold text-slate-800 uppercase tracking-tight">${EMPRESA_NOMBRE}</div>
+            <div class="text-md font-bold text-slate-700">Balance de Comprobación</div>
+            <div class="text-sm text-slate-500 italic">Del ${desde} al ${hasta}</div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto print:overflow-visible">
         <table class="w-full text-xs">
             <thead><tr class="bg-slate-800 text-white text-xs uppercase">
                 <th class="px-3 py-2 text-left">Código</th>
@@ -232,7 +184,7 @@ function renderBalanceComprobacion(data, cont, desde, hasta) {
             <tbody>${rows}</tbody>
             <tfoot class="bg-slate-800 text-white font-bold text-sm">
                 <tr>
-                    <td colspan="2" class="px-3 py-2">TOTALES</td>
+                    <td colspan="2" class="px-3 py-2 text-right">TOTALES</td>
                     <td class="px-3 py-2 text-right font-mono">${fmt(totDeb)}</td>
                     <td class="px-3 py-2 text-right font-mono">${fmt(totCre)}</td>
                     <td class="px-3 py-2 text-right font-mono ${Math.abs(totDeb-totCre)>0.01?'text-red-400':''}">${fmt(totDeb-totCre)}</td>
@@ -240,7 +192,7 @@ function renderBalanceComprobacion(data, cont, desde, hasta) {
             </tfoot>
         </table>
         </div>
-        <div class="p-3 text-xs text-slate-500 text-right">Generado: ${new Date().toLocaleString('es-HN')} · ${data.length} cuentas</div>`;
+        <div class="p-3 text-xs text-slate-400 text-right italic">Generado: ${new Date().toLocaleString('es-HN')} · ${data.length} cuentas</div>`;
 }
 
 function renderBalanceGeneral(data, cont, corte) {
@@ -253,33 +205,34 @@ function renderBalanceGeneral(data, cont, corte) {
     const sumPatrimonio= patrimonio.reduce((s,r) => s+parseFloat(r.saldo_neto), 0);
 
     const seccion = (titulo, rows, total) => `
-        <div>
-            <div class="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-1">${titulo}</div>
+        <div class="mb-4">
+            <div class="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-1 font-bold">${titulo}</div>
             ${rows.map(r => `
-            <div class="flex justify-between py-0.5 ${r.nivel<3?'font-semibold':'pl-4 text-slate-600'}">
-                <span class="font-mono text-slate-400 w-20 flex-shrink-0">${r.codigo}</span>
+            <div class="flex justify-between py-1 border-b border-slate-50 ${r.nivel<3?'font-bold':(r.nivel===3?'pl-4':'pl-8 text-slate-500')}">
+                <span class="font-mono text-[10px] text-slate-400 w-20 flex-shrink-0">${r.codigo}</span>
                 <span class="flex-1 px-2">${r.nombre}</span>
                 <span class="font-mono text-right w-32">${fmt(r.saldo_neto)}</span>
             </div>`).join('')}
-            <div class="flex justify-between py-1 font-bold border-t border-slate-200 mt-1">
+            <div class="flex justify-between py-2 font-bold border-t border-slate-200 mt-1 bg-slate-50 px-1 rounded">
                 <span>Total ${titulo}</span>
                 <span class="font-mono">${fmt(total)}</span>
             </div>
         </div>`;
 
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100">
-            <div class="text-lg font-bold text-slate-800 text-center">Balance General</div>
-            <div class="text-sm text-center text-slate-500">${EMPRESA_NOMBRE} · Al ${corte}</div>
+        <div class="p-5 border-b border-slate-100 text-center">
+            <div class="text-lg font-bold text-slate-800 uppercase tracking-tight">${EMPRESA_NOMBRE}</div>
+            <div class="text-md font-bold text-slate-700">Balance General</div>
+            <div class="text-sm text-slate-500 italic">Al ${corte}</div>
         </div>
-        <div class="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+        <div class="p-5 grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs">
             <div class="space-y-4">
                 ${seccion('ACTIVOS', activos, sumActivos)}
             </div>
             <div class="space-y-4">
                 ${seccion('PASIVOS', pasivos, sumPasivos)}
                 ${seccion('PATRIMONIO', patrimonio, sumPatrimonio)}
-                <div class="flex justify-between py-1 font-bold border-t-2 border-slate-800 text-sm">
+                <div class="flex justify-between py-3 px-2 font-bold border-t-2 border-slate-800 text-sm bg-slate-100 rounded">
                     <span>TOTAL PASIVO + PATRIMONIO</span>
                     <span class="font-mono">${fmt(sumPasivos+sumPatrimonio)}</span>
                 </div>
@@ -295,20 +248,23 @@ function renderEstadoResultados(data, cont, desde, hasta) {
     const utilidad = totIng - totGas;
 
     cont.innerHTML = `
-        <div class="p-5 border-b"><div class="text-lg font-bold text-center">Estado de Resultados</div>
-        <div class="text-sm text-center text-slate-500">${EMPRESA_NOMBRE} · ${desde} – ${hasta}</div></div>
-        <div class="p-5 max-w-lg mx-auto text-xs space-y-4">
-            <div>
-                <div class="font-bold text-slate-600 uppercase text-sm mb-1 border-b pb-1">INGRESOS</div>
-                ${ing.map(r=>`<div class="flex justify-between py-0.5 pl-4"><span>${r.nombre}</span><span class="font-mono">${fmt(Math.abs(r.saldo_neto))}</span></div>`).join('')}
-                <div class="flex justify-between font-bold border-t pt-1"><span>Total Ingresos</span><span class="font-mono text-emerald-700">${fmt(totIng)}</span></div>
+        <div class="p-5 border-b border-slate-100 text-center text-slate-800">
+            <div class="text-lg font-bold uppercase">${EMPRESA_NOMBRE}</div>
+            <div class="text-md font-bold">Estado de Resultados</div>
+            <div class="text-sm text-slate-500 italic">${desde} – ${hasta}</div>
+        </div>
+        <div class="p-5 max-w-2xl mx-auto text-xs space-y-6">
+            <div class="bg-white p-3 border rounded-lg">
+                <div class="font-bold text-slate-600 uppercase text-sm mb-2 border-b pb-1">INGRESOS</div>
+                ${ing.map(r=>`<div class="flex justify-between py-1 pl-4 border-b border-slate-50"><span>${r.nombre}</span><span class="font-mono">${fmt(Math.abs(r.saldo_neto))}</span></div>`).join('')}
+                <div class="flex justify-between font-bold border-t pt-2 mt-1"><span>Total Ingresos</span><span class="font-mono text-emerald-700">${fmt(totIng)}</span></div>
             </div>
-            <div>
-                <div class="font-bold text-slate-600 uppercase text-sm mb-1 border-b pb-1">GASTOS Y COSTOS</div>
-                ${gas.map(r=>`<div class="flex justify-between py-0.5 pl-4"><span>${r.nombre}</span><span class="font-mono">${fmt(Math.abs(r.saldo_neto))}</span></div>`).join('')}
-                <div class="flex justify-between font-bold border-t pt-1"><span>Total Gastos</span><span class="font-mono text-red-600">${fmt(totGas)}</span></div>
+            <div class="bg-white p-3 border rounded-lg">
+                <div class="font-bold text-slate-600 uppercase text-sm mb-2 border-b pb-1">GASTOS Y COSTOS</div>
+                ${gas.map(r=>`<div class="flex justify-between py-1 pl-4 border-b border-slate-50"><span>${r.nombre}</span><span class="font-mono">${fmt(Math.abs(r.saldo_neto))}</span></div>`).join('')}
+                <div class="flex justify-between font-bold border-t pt-2 mt-1"><span>Total Gastos</span><span class="font-mono text-red-600">${fmt(totGas)}</span></div>
             </div>
-            <div class="flex justify-between font-bold text-base border-t-2 border-slate-800 pt-2">
+            <div class="flex justify-between font-bold text-lg border-t-2 border-slate-800 pt-3 px-1 text-slate-900">
                 <span>${utilidad >= 0 ? 'UTILIDAD DEL PERÍODO' : 'PÉRDIDA DEL PERÍODO'}</span>
                 <span class="font-mono ${utilidad>=0?'text-emerald-700':'text-red-600'}">${fmt(Math.abs(utilidad))}</span>
             </div>
@@ -316,13 +272,16 @@ function renderEstadoResultados(data, cont, desde, hasta) {
 }
 
 function renderAuxiliar(data, cont, cuenta, desde, hasta) {
-    if (!data.length) { cont.innerHTML = '<div class="p-10 text-center text-slate-400 italic">Sin movimientos para el período y cuenta seleccionados.</div>'; return; }
+    if (!data.length) { cont.innerHTML = '<div class="p-10 text-center text-slate-400 italic">No existen registros para esta cuenta.</div>'; return; }
     cont.innerHTML = `
-        <div class="p-4 border-b"><div class="text-lg font-bold text-center">Auxiliar de Cuenta: ${cuenta}</div>
-        <div class="text-sm text-center text-slate-500">${desde} – ${hasta}</div></div>
-        <div class="overflow-x-auto">
-        <table class="w-full text-xs">
-            <thead><tr class="bg-slate-800 text-white">
+        <div class="p-5 border-b border-slate-100 text-center">
+            <div class="text-lg font-bold uppercase">${EMPRESA_NOMBRE}</div>
+            <div class="text-md font-bold uppercase">Auxiliar de Cuenta: ${cuenta}</div>
+            <div class="text-sm text-slate-500 italic">${desde} – ${hasta}</div>
+        </div>
+        <div class="overflow-x-auto print:overflow-visible">
+        <table class="w-full text-[10px]">
+            <thead><tr class="bg-slate-800 text-white font-bold">
                 <th class="px-3 py-2 text-left">Fecha</th>
                 <th class="px-3 py-2 text-left">Tipo</th>
                 <th class="px-3 py-2 text-left">Nº</th>
@@ -332,17 +291,72 @@ function renderAuxiliar(data, cont, cuenta, desde, hasta) {
                 <th class="px-3 py-2 text-right">Crédito</th>
                 <th class="px-3 py-2 text-right">Saldo</th>
             </tr></thead>
-            <tbody>${data.map(r=>`<tr class="border-b border-slate-100 hover:bg-slate-50">
-                <td class="px-3 py-1.5">${r.fecha}</td>
-                <td class="px-3 py-1.5 font-mono">${r.tipo_comp}</td>
-                <td class="px-3 py-1.5 font-mono">${r.numero}</td>
-                <td class="px-3 py-1.5 max-w-[140px] truncate">${r.tercero||'—'}</td>
-                <td class="px-3 py-1.5 max-w-[180px] truncate">${r.descripcion||''}</td>
+            <tbody>${data.map(r=>`<tr class="border-b border-slate-100 hover:bg-slate-50 font-medium">
+                <td class="px-3 py-1.5 font-mono">${r.fecha}</td>
+                <td class="px-3 py-1.5 font-bold text-blue-600 uppercase">${r.tipo_comp}</td>
+                <td class="px-3 py-1.5 font-mono text-slate-500">${r.numero}</td>
+                <td class="px-3 py-1.5 max-w-[120px] truncate" title="${r.tercero||''}">${r.tercero||'—'}</td>
+                <td class="px-3 py-1.5 max-w-[150px] truncate text-slate-500" title="${r.descripcion||''}">${r.descripcion||''}</td>
                 <td class="px-3 py-1.5 text-right font-mono text-emerald-700">${parseFloat(r.debito)>0?fmt(r.debito):''}</td>
                 <td class="px-3 py-1.5 text-right font-mono text-blue-700">${parseFloat(r.credito)>0?fmt(r.credito):''}</td>
-                <td class="px-3 py-1.5 text-right font-mono ${parseFloat(r.saldo_acumulado)<0?'text-red-600':'text-slate-700'}">${fmt(r.saldo_acumulado)}</td>
+                <td class="px-3 py-1.5 text-right font-mono font-bold ${parseFloat(r.saldo_acumulado)<0?'text-red-600':'text-slate-800'}">${fmt(r.saldo_acumulado)}</td>
             </tr>`).join('')}</tbody>
         </table></div>`;
+}
+
+function renderISVReport(data, cont, desde, hasta) {
+    if (!data.length) { cont.innerHTML = '<div class="p-10 text-center text-slate-400 italic font-bold">Sin transacciones fiscales.</div>'; return; }
+    let totalImp = 0;
+    const items = data.map(r => {
+        const imp = parseFloat(r.debito > 0 ? r.debito : r.credito);
+        totalImp += imp;
+        const tasa = r.descripcion.includes('18%') ? 0.18 : 0.15;
+        const base = imp / tasa;
+        return `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 font-mono text-[10px] text-slate-500">${r.fecha}</td>
+            <td class="px-4 py-3">
+                <div class="font-black text-slate-800 tracking-tight">${r.tipo}-${r.numero}</div>
+                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-tight">${r.rtn||'SIN RTN'}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-600 font-medium truncate max-w-[200px]">${r.tercero||'Público en General'}</td>
+            <td class="px-4 py-3 text-right font-mono font-bold text-slate-400">${fmt(base)}</td>
+            <td class="px-4 py-3 text-right font-mono font-black text-blue-700">${fmt(imp)}</td>
+            <td class="px-4 py-3 text-center">
+                <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black border border-blue-100">${(tasa*100)}%</span>
+            </td>
+        </tr>`;
+    }).join('');
+
+    cont.innerHTML = `
+        <div class="p-8 border-b border-slate-100 bg-slate-50/50 text-center">
+            <div class="text-lg font-bold">${EMPRESA_NOMBRE}</div>
+            <h2 class="text-2xl font-black text-slate-800 tracking-tighter">Liquidación Informativa de ISV</h2>
+            <p class="text-sm text-slate-500 font-medium mt-1 uppercase tracking-widest">${desde} a ${hasta}</p>
+        </div>
+        <div class="overflow-x-auto p-4 print:p-0">
+        <table class="w-full text-xs bg-white rounded-lg overflow-hidden shadow-sm border border-slate-100">
+            <thead>
+                <tr class="bg-blue-700 text-white uppercase tracking-widest text-[10px] font-black">
+                    <th class="px-4 py-4 text-left">Emisión</th>
+                    <th class="px-4 py-4 text-left">Documento / Beneficiario</th>
+                    <th class="px-4 py-4 text-left">Tercero</th>
+                    <th class="px-4 py-4 text-right">Base Est.</th>
+                    <th class="px-4 py-4 text-right">Impuesto</th>
+                    <th class="px-4 py-4 text-center">Tasa</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50 italic">
+                ${items}
+            </tbody>
+            <tfoot class="bg-slate-900 text-white font-black text-sm border-t-2 border-slate-800">
+                <tr>
+                    <td colspan="4" class="px-6 py-4 text-right text-[10px] uppercase tracking-widest opacity-60">Total Liquidado</td>
+                    <td class="px-6 py-4 text-right font-mono text-lg">${fmt(totalImp)}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>`;
 }
 </script>
 </body>

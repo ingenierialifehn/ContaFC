@@ -12,11 +12,53 @@ $empresa = null;
 $periodos = [];
 try {
     $db = Database::getInstance()->getPdo();
-    $empresa = $db->query("SELECT * FROM empresas WHERE id = " . Auth::empresaId())->fetch();
-    $periodos = $db->query("SELECT * FROM periodos WHERE empresa_id = " . Auth::empresaId() . " ORDER BY anio DESC, mes DESC")->fetchAll();
-} catch (\Throwable $e) {}
+    $eid = Auth::empresaId();
+    $empresa = $db->query("SELECT * FROM empresas WHERE id = $eid")->fetch();
+    
+    // --- AUTODETECCIÓN POR COMPROBANTES ---
+    // Si hay comprobantes en años que no están en la tabla de periodos, los creamos
+    $sqlAuto = "SELECT DISTINCT YEAR(fecha) as anio, MONTH(fecha) as mes 
+                FROM comprobantes 
+                WHERE empresa_id = :eid1 
+                AND NOT EXISTS (
+                    SELECT 1 FROM periodos 
+                    WHERE empresa_id = :eid2 
+                    AND anio = YEAR(comprobantes.fecha) 
+                    AND mes = MONTH(comprobantes.fecha)
+                )";
+    $stmtAuto = $db->prepare($sqlAuto);
+    $stmtAuto->execute([':eid1' => $eid, ':eid2' => $eid]);
+    $missingPeriods = $stmtAuto->fetchAll();
+
+    if (!empty($missingPeriods)) {
+        $ins = $db->prepare("INSERT INTO periodos (empresa_id, anio, mes, estado) VALUES (:eid, :anio, :mes, 'abierto')");
+        foreach ($missingPeriods as $m) {
+            $ins->execute([':eid' => $eid, ':anio' => $m['anio'], ':mes' => $m['mes']]);
+        }
+        
+        // Sincronizar period_id en comprobantes para asegurar consistencia
+        $db->prepare("UPDATE comprobantes c 
+                     JOIN periodos p ON p.empresa_id = c.empresa_id AND p.anio = YEAR(c.fecha) AND p.mes = MONTH(c.fecha)
+                     SET c.periodo_id = p.id
+                     WHERE c.empresa_id = :eid")->execute([':eid' => $eid]);
+    }
+    
+    // Consulta final: Traemos todos los periodos registrados para esta empresa
+    $sql = "SELECT id, anio, mes FROM periodos WHERE empresa_id = :eid ORDER BY anio DESC, mes DESC";
+            
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':eid' => $eid]);
+    $periodos = $stmt->fetchAll();
+
+    if (empty($periodos)) {
+        $periodos = [['id' => 0, 'anio' => date('Y'), 'mes' => date('m')]];
+    }
+} catch (\Throwable $e) {
+    die("Error crítico de sistema: " . $e->getMessage());
+}
 
 $activeNav = 'libros';
+$maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
 ?>
 <!DOCTYPE html>
 <html lang="es" class="h-full bg-slate-50 text-slate-700">
@@ -58,7 +100,7 @@ $activeNav = 'libros';
                 <nav class="flex text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 gap-2">
                     <span class="text-honduras">Auditoría & Libros</span>
                     <span>/</span>
-                    <span>Honduras 2026</span>
+                    <span>Honduras <?= $maxAnio ?></span>
                 </nav>
                 <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">Libros Oficiales Autorizados</h1>
                 <p class="text-slate-500 text-xs mt-1">Generación de archivos para impresión en hojas foliadas.</p>
@@ -67,7 +109,7 @@ $activeNav = 'libros';
     </header>
 
     <div class="flex-1 overflow-auto p-8">
-        <div class="max-w-6xl mx-auto flex flex-col gap-10">
+        <div class="w-full flex flex-col gap-10">
              <!-- Control de Libros -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 
@@ -120,7 +162,7 @@ $activeNav = 'libros';
                 <!-- Inventarios y Balances -->
                 <div class="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm hover:shadow-2xl transition group relative overflow-hidden">
                     <div class="absolute -right-8 -top-8 w-32 h-32 bg-rose-50 rounded-full blur-2xl group-hover:bg-rose-100 transition duration-500"></div>
-                    <h3 class="text-2xl font-black text-slate-800 mb-2 relative">Iny. & Balances</h3>
+                    <h3 class="text-2xl font-black text-slate-800 mb-2 relative">Inv. & Balances</h3>
                     <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-6 border-b border-slate-50 pb-4">Situación Financiera Anual</p>
                     
                     <div class="space-y-4">

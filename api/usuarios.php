@@ -7,7 +7,12 @@ use ContaFC\Core\Database;
 
 header('Content-Type: application/json; charset=utf-8');
 Auth::requireAuth();
-Auth::requireRol('admin');
+Auth::requireAuth();
+if (!Auth::hasRole('admin')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Acceso denegado. Se requiere rol de administrador.']);
+    exit;
+}
 
 $db     = Database::getInstance()->getPdo();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -65,13 +70,15 @@ try {
         }
 
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $default_eid = !empty($empresa_ids) ? (int)$empresa_ids[0] : (int)Auth::empresaId();
 
         $db->beginTransaction();
         $stmt = $db->prepare(
-            "INSERT INTO usuarios (username, nombre, email, rol, permisos, password_hash, activo, created_at)
-             VALUES (:u, :n, :e, :r, :p, :h, 1, NOW())"
+            "INSERT INTO usuarios (empresa_id, username, nombre, email, rol, permisos, password_hash, activo, created_at)
+             VALUES (:eid, :u, :n, :e, :r, :p, :h, 1, NOW())"
         );
         $stmt->execute([
+            ':eid' => $default_eid,
             ':u' => $username, ':n' => $nombre, ':e' => $email,
             ':r' => $rol, ':p' => $permisos, ':h' => $hash,
         ]);
