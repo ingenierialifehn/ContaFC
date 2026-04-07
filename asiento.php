@@ -52,6 +52,8 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
     </script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         .sidebar-link { display:flex; align-items:center; gap:.75rem; padding:.625rem 1rem;
@@ -113,6 +115,11 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-700 transition-all text-xs font-medium">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
             Anular
+        </button>
+        <button id="btn-excel" title="Exportar a Excel" onclick="exportarExcel()"
+                class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-800 transition-all text-xs font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Exportar
         </button>
         <div class="w-px h-10 bg-slate-200 mx-1"></div>
         <button onclick="addLinea()" title="Agregar línea"
@@ -224,7 +231,6 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
                             <th class="px-2 py-2 text-left w-20">Centro C.</th>
                             <th class="px-2 py-2 text-right w-32">Débito</th>
                             <th class="px-2 py-2 text-right w-32">Crédito</th>
-                            <th class="px-2 py-2 text-center w-20">ISV (%)</th>
                             <th class="px-2 py-2 text-left min-w-40">Descripción</th>
                             <th class="px-2 py-2 text-left w-24">Fecha</th>
                         </tr>
@@ -366,7 +372,6 @@ function renderGrid(append = false) {
                        value="${l.credito > 0 ? parseFloat(l.credito).toFixed(2) : ''}"
                        onchange="setCredito(${i}, this.value)" id="inp-cre-${i}">
             </td>
-            <td class="editing w-20 text-center text-slate-300">—</td>
             <td class="editing min-w-40">
                 <input type="text" class="grid-input text-slate-600" value="${esc(l.descripcion)}" onchange="lineas[${i}].descripcion=this.value">
             </td>
@@ -444,41 +449,46 @@ function actualizarTotales() {
     badge.style.opacity = '1';
 }
 
-// ─── Asistente de ISV (Honduras) ──────────────────────────────────────────
-async function calcularISV(idx, tasa) {
-    tasa = parseFloat(tasa);
-    if (tasa === 0) return;
-
-    const l = lineas[idx];
-    const base = l.debito || l.credito;
-    if (base <= 0) return;
-
-    const impuesto = parseFloat((base * (tasa / 100)).toFixed(2));
-    const isDebito = l.debito > 0;
-
-    const confirm = await Swal.fire({
-        title: `Calcular ISV ${tasa}%`,
-        text: `¿Deseas agregar una línea de ISV por L. ${impuesto.toFixed(2)}?`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, agregar',
-        cancelButtonText: 'No'
+// ─── Exportar a Excel ───────────────────────────────────────────────────
+function exportarExcel() {
+    const ws_data = [
+        ['#', 'Código Cta.', 'Nombre Cuenta', 'Tercero', 'Doc. Tipo', 'Doc. Número', 'Proyecto', 'Centro C.', 'Débito', 'Crédito', 'Descripción', 'Fecha']
+    ];
+    
+    let l_count = 1;
+    let t_deb = 0;
+    let t_cre = 0;
+    lineas.forEach(l => {
+        if (!l.cuenta_codigo && !l.debito && !l.credito) return;
+        ws_data.push([
+            l_count++,
+            l.cuenta_codigo || '',
+            l.cuenta_nombre || '',
+            l.tercero_nombre || '',
+            l.doc_cruce_tipo || '',
+            l.doc_cruce_num || '',
+            l.proyecto_nombre || '',
+            l.ceco_nombre || '',
+            l.debito || 0,
+            l.credito || 0,
+            l.descripcion || '',
+            l.fecha || ''
+        ]);
+        t_deb += (l.debito || 0);
+        t_cre += (l.credito || 0);
     });
 
-    if (confirm.isConfirmed) {
-        const nuevaL = nuevaLinea();
-        nuevaL.debito  = isDebito ? impuesto : 0;
-        nuevaL.credito = !isDebito ? impuesto : 0;
-        nuevaL.descripcion = `ISV ${tasa}% de: ${l.cuenta_nombre || l.cuenta_codigo}`;
-        
-        // Intentar pre-cargar cuenta de ISV por defecto (Honduras)
-        // 1106-01 (ISV Pagado) o 2103-01 (ISV Cobrado) ?
-        const ctaISV = isDebito ? '110601' : '210301'; 
-        lineas.splice(idx + 1, 0, nuevaL);
-        renderGrid();
-        actualizarTotales();
-        setCuentaByCodigo(idx + 1, ctaISV);
+    if (ws_data.length <= 1) {
+        Swal.fire({ icon:'warning', title:'Asiento Vacío', text:'No hay líneas válidas para exportar.' });
+        return;
     }
+
+    ws_data.push(['', '', '', '', '', '', '', 'TOTALES', t_deb, t_cre, '', '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asiento");
+    XLSX.writeFile(wb, `Asiento_${document.getElementById('numero_comp').value||'Nuevo'}.xlsx`);
 }
 
 // ─── Buscar cuenta por código ─────────────────────────────────────────────
@@ -591,8 +601,15 @@ function nuevoComprobante() {
 
 // ─── Guardar comprobante (con SweetAlert2) ─────────────────────────────
 async function guardarComprobante() {
-    const totDeb = lineas.reduce((s, l) => s + l.debito,  0);
-    const totCre = lineas.reduce((s, l) => s + l.credito, 0);
+    const lineasValidas = lineas.filter(l => l.cuenta_id && (l.debito > 0 || l.credito > 0));
+
+    if (lineasValidas.length === 0) {
+        await Swal.fire({ icon: 'error', title: 'Asiento vacío', text: 'Debe ingresar al menos una cuenta con monto.' });
+        return;
+    }
+
+    const totDeb = lineasValidas.reduce((s, l) => s + l.debito,  0);
+    const totCre = lineasValidas.reduce((s, l) => s + l.credito, 0);
     const dif    = Math.abs(totDeb - totCre);
 
     if (dif > 0.01) {
@@ -601,6 +618,7 @@ async function guardarComprobante() {
             title: '¡Partida Doble Descuadrada!',
             html: `
                 <div class="text-left space-y-2 mt-2">
+                    <div class="text-xs text-slate-500 text-center mb-2">Nota: Solo se suman líneas con cuenta seleccionada.</div>
                     <div class="flex justify-between bg-red-50 p-2 rounded"><span class="text-slate-600">Total Débitos:</span><span class="font-mono font-bold text-emerald-700">${fmt(totDeb)}</span></div>
                     <div class="flex justify-between bg-red-50 p-2 rounded"><span class="text-slate-600">Total Créditos:</span><span class="font-mono font-bold text-blue-700">${fmt(totCre)}</span></div>
                     <div class="flex justify-between bg-red-100 p-2 rounded border border-red-200"><span class="text-red-700 font-semibold">Diferencia:</span><span class="font-mono font-bold text-red-700">${fmt(dif)}</span></div>
@@ -632,7 +650,6 @@ async function guardarComprobante() {
     if (!result.isConfirmed) return;
 
     // Preparar payload
-    const lineasValidas = lineas.filter(l => l.cuenta_id && (l.debito > 0 || l.credito > 0));
     const payload = {
         tipo_comp_id:  parseInt(document.getElementById('tipo_comp_id').value),
         fecha:         document.getElementById('fecha').value,

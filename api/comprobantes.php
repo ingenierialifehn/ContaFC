@@ -20,6 +20,15 @@ try {
         $body = json_decode(file_get_contents('php://input'), true);
         if (!$body || empty($body['lineas'])) throw new Exception("Datos incompletos.");
 
+        $tDeb = 0; $tCre = 0;
+        foreach ($body['lineas'] as $l) {
+            $tDeb += (float)$l['debito'];
+            $tCre += (float)$l['credito'];
+        }
+        if (abs($tDeb - $tCre) > 0.01) {
+            throw new Exception("El asiento no está balanceado. Débitos: $tDeb, Créditos: $tCre");
+        }
+
         $db->beginTransaction();
 
         // 1. Crear el Comprobante
@@ -80,10 +89,11 @@ try {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
         if ($id) {
             $stmt = $db->prepare(
-                "SELECT c.*, t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo
+                "SELECT c.*, t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo, u.username as usuario_registro
                  FROM comprobantes c
                  LEFT JOIN terceros t ON c.tercero_id = t.id
                  JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
+                 LEFT JOIN usuarios u ON c.usuario_id = u.id
                  WHERE c.id = :id AND c.empresa_id = :eid"
             );
             $stmt->execute([':id' => $id, ':eid' => $eid]);
@@ -120,10 +130,12 @@ try {
 
             // Consulta optimizada para traer totales pre-calculados en la tabla comprobantes
             $sql = "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.razon_social as tercero,
-                           (SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id) AS fecha_asiento
+                           (SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id) AS fecha_asiento,
+                           u.username as usuario_modifico
                     FROM comprobantes c
                     JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
                     LEFT JOIN terceros t ON c.tercero_id = t.id
+                    LEFT JOIN usuarios u ON c.usuario_id = u.id
                     WHERE c.empresa_id = :eid AND c.estado = :e
                       AND EXISTS (SELECT 1 FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha BETWEEN :d AND :h)
                     ORDER BY fecha_asiento DESC, c.id DESC

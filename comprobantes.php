@@ -102,12 +102,13 @@ $activeNav = 'comprobantes';
                             <th class="px-4 py-3 text-left font-semibold">Tercero Principal</th>
                             <th class="px-4 py-3 text-right font-semibold">Total Débitos</th>
                             <th class="px-4 py-3 text-right font-semibold">Total Créditos</th>
+                            <th class="px-4 py-3 text-left font-semibold">Modificado Por</th>
                             <th class="px-4 py-3 text-center font-semibold">Estado</th>
                             <th class="px-4 py-3 text-center font-semibold">Acción</th>
                         </tr>
                     </thead>
                     <tbody id="lista-comprobantes" class="divide-y divide-slate-100 italic text-slate-400">
-                        <tr><td colspan="8" class="text-center py-10">Use los filtros para buscar información...</td></tr>
+                        <tr><td colspan="9" class="text-center py-10">Use los filtros para buscar información...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -153,7 +154,7 @@ async function cargarListado(page = 1) {
     const estado= document.getElementById('f-estado').value;
 
     const tbody = document.getElementById('lista-comprobantes');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10"><div class="flex items-center justify-center gap-3"><div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando datos...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10"><div class="flex items-center justify-center gap-3"><div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando datos...</div></td></tr>';
 
     try {
         const res  = await fetch(`<?= BASE_URL ?>/api/comprobantes.php?desde=${desde}&hasta=${hasta}&estado=${estado}&page=${currentPage}&limit=${recordsLimit}`);
@@ -162,7 +163,7 @@ async function cargarListado(page = 1) {
         const pag  = json.pagination || {};
 
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-slate-500">No se encontraron comprobantes para el filtro aplicado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-500">No se encontraron comprobantes para el filtro aplicado.</td></tr>';
             document.getElementById('info-count').textContent = 'Mostrando 0 de 0 registros';
             updatePaginationControls(0, 0);
             return;
@@ -182,6 +183,7 @@ async function cargarListado(page = 1) {
                 <td class="px-4 py-3 text-slate-600 font-medium text-xs truncate max-w-[150px]">${r.tercero || '<span class="text-slate-300">—</span>'}</td>
                 <td class="px-4 py-3 text-right font-mono text-emerald-700 font-semibold">${fmtHNL(r.total_debitos)}</td>
                 <td class="px-4 py-3 text-right font-mono text-blue-700 font-semibold">${fmtHNL(r.total_creditos)}</td>
+                <td class="px-4 py-3 text-left text-slate-500 text-xs">${r.usuario_modifico || 'Desconocido'}</td>
                 <td class="px-4 py-3 text-center">
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider ${estadoBadge(r.estado)}">${r.estado}</span>
                 </td>
@@ -202,7 +204,7 @@ async function cargarListado(page = 1) {
 
     } catch (e) {
         console.error(e);
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-red-500 font-medium">Error en el servidor al cargar los datos. Intente más tarde.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-red-500 font-medium">Error en el servidor al cargar los datos. Intente más tarde.</td></tr>';
     }
 }
 

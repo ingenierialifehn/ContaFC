@@ -28,6 +28,11 @@ if ($tipo === 'DIARIO') {
     die("Tipo de libro no soportado aún.");
 }
 
+if (isset($_GET['format']) && $_GET['format'] === 'excel') {
+    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+    header('Content-Disposition: attachment; filename=Libro_' . $tipo . '.xls');
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -51,7 +56,9 @@ if ($tipo === 'DIARIO') {
     </style>
 </head>
 <body>
+    <?php if (!isset($_GET['format']) || $_GET['format'] !== 'excel'): ?>
     <button class="btn-print" onclick="window.print()">IMPRIMIR EN HOJAS FOLIADAS</button>
+    <?php endif; ?>
 
     <div class="page">
         <div class="folio">F-<?= str_pad((string)$folio, 5, '0', STR_PAD_LEFT) ?></div>

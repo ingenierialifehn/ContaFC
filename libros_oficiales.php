@@ -132,7 +132,12 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Folio Inicial</label>
                             <input id="f_diario" type="number" value="1" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
                         </div>
-                        <button onclick="generarLibro('DIARIO')" class="w-full py-4 mt-6 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-honduras transition shadow-lg shadow-black/10">Generar Libro Diario</button>
+                        <div class="flex gap-2 mt-6">
+                            <button onclick="generarLibro('DIARIO')" class="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-honduras transition shadow-lg shadow-black/10">Generar Libro Diario</button>
+                            <button onclick="generarLibroXLS('DIARIO')" class="px-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-lg shadow-black/10" title="Exportar a Excel">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -155,7 +160,12 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Folio Inicial</label>
                             <input id="f_mayor" type="number" value="1" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
                         </div>
-                        <button onclick="generarLibro('MAYOR')" class="w-full py-4 mt-6 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition shadow-lg shadow-black/10">Generar Libro Mayor</button>
+                        <div class="flex gap-2 mt-6">
+                            <button onclick="generarLibro('MAYOR')" class="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition shadow-lg shadow-black/10">Generar Libro Mayor</button>
+                            <button onclick="generarLibroXLS('MAYOR')" class="px-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-lg shadow-black/10" title="Exportar a Excel">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -186,7 +196,12 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Folio Inicial</label>
                             <input id="f_inv" type="number" value="1" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
                         </div>
-                        <button onclick="generarLibro('INVENTARIOS')" class="w-full py-4 mt-6 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition shadow-lg shadow-black/10">Generar Inventarios</button>
+                        <div class="flex gap-2 mt-6">
+                            <button onclick="generarLibro('INVENTARIOS')" class="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition shadow-lg shadow-black/10">Generar Inventarios</button>
+                            <button onclick="generarLibroXLS('INVENTARIOS')" class="px-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-lg shadow-black/10" title="Exportar a Excel">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -226,6 +241,16 @@ function generarLibro(tipo) {
              window.open(`<?= BASE_URL ?>/api/libros_oficiales.php?tipo=${tipo}&pid=${pId}&folio=${folio}`);
         }
     });
+}
+
+function generarLibroXLS(tipo) {
+    const idMap = { 'DIARIO': 'p_diario', 'MAYOR': 'p_mayor', 'INVENTARIOS': 'p_inv' };
+    const folMap = { 'DIARIO': 'f_diario', 'MAYOR': 'f_mayor', 'INVENTARIOS': 'f_inv' };
+    
+    const pId = document.getElementById(idMap[tipo]).value;
+    const folio = document.getElementById(folMap[tipo]).value;
+
+    window.open(`<?= BASE_URL ?>/api/libros_oficiales.php?tipo=${tipo}&pid=${pId}&folio=${folio}&format=excel`);
 }
 </script>
 
