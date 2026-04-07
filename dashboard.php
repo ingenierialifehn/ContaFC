@@ -95,7 +95,7 @@ $activeNav = 'dashboard';
         <div class="flex items-center gap-8">
             <div class="hidden lg:flex flex-col items-end px-10 border-r border-white/5">
                 <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado del Periodo</span>
-                <span class="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg text-[10px] font-black border border-emerald-500/20">MARZO 2026 - ABIERTO</span>
+                <span class="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg text-[10px] font-black border border-emerald-500/20">HISTÓRICO ACUMULADO</span>
             </div>
             <div class="flex flex-col items-end">
                 <span class="text-[10px] font-black text-brand uppercase tracking-widest mb-1">Última Auditoría</span>
@@ -141,7 +141,7 @@ $activeNav = 'dashboard';
                 <div class="flex items-center justify-between mb-10">
                     <div>
                         <h3 class="text-xl font-black text-white italic uppercase tracking-tighter">Comparativa Ingresos vs Egresos</h3>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Flujo Acumulado Mensual - Año 2026</p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Flujo Acumulado Histórico</p>
                     </div>
                 </div>
                 <div class="h-80 relative">
@@ -230,8 +230,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Core Data Fetch
     async function initDashboard() {
         try {
-            // Load KPI from Balance de Comprobación API
-            const resKPI = await fetch('api/reportes.php?tipo=balance_comprobacion');
+            // Load KPI from Balance de Comprobación API (Fetching all historical data)
+            const today = new Date().toISOString().split('T')[0];
+            const resKPI = await fetch(`api/reportes.php?tipo=balance_comprobacion&desde=1900-01-01&hasta=${today}`);
             const dataKPI = (await resKPI.json()).data || [];
 
             // Accounting Logic: 

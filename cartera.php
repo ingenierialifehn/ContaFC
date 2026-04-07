@@ -16,9 +16,10 @@ try {
 
     // Listado de terceros para los selects
     $terceros = $db->query(
-        "SELECT id, nombre FROM terceros WHERE empresa_id = " . Auth::empresaId() . " ORDER BY nombre"
+        "SELECT id, razon_social AS nombre FROM terceros WHERE empresa_id = " . Auth::empresaId() . " ORDER BY razon_social"
     )->fetchAll();
 } catch (\Throwable $e) {
+    echo "<script>console.error('PHP Error loading terceros: " . addslashes($e->getMessage()) . "');</script>";
     $terceros = [];
 }
 
@@ -35,6 +36,8 @@ $activeNav = 'cartera';
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>tailwind.config={theme:{extend:{colors:{brand:'#0ea5e9'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <style>
         body { background: radial-gradient(circle at 20% 20%, rgba(14,165,233,.04) 0%, transparent 50%), #020617; }
         .glass { background:rgba(15,23,42,.5); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.04); }
@@ -333,12 +336,25 @@ $activeNav = 'cartera';
     .input-field:focus { border-color:rgba(14,165,233,.5); box-shadow:0 0 0 3px rgba(14,165,233,.1); }
     .input-field option { background:#0f172a; color:#e2e8f0; }
     @media print { body > *:not(#print-recibo) { display:none !important; } #print-recibo { display:block !important; } }
+    
+    /* Tom Select Overrides para mantener el diseño Glass y Dark Mode */
+    .ts-wrapper.input-field { padding: 0; border: none; background: transparent; }
+    .ts-control { background: rgba(255,255,255,.05) !important; border: 1px solid rgba(255,255,255,.07) !important; border-radius: .75rem !important; padding: .75rem 1rem !important; color: #e2e8f0 !important; font-size: .8rem !important; font-weight: 700 !important; box-shadow: none !important; transition: all .2s !important; }
+    .ts-wrapper.focus .ts-control { border-color: rgba(14,165,233,.5) !important; box-shadow: 0 0 0 3px rgba(14,165,233,.1) !important; }
+    .ts-dropdown { background: #0f172a !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: .75rem !important; margin-top: .5rem !important; color: #e2e8f0 !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,.5) !important; padding: .5rem !important; }
+    .ts-dropdown .option { padding: .5rem 1rem !important; border-radius: .5rem !important; color: #94a3b8 !important; font-weight: 700 !important; font-size: .8rem !important; cursor: pointer; }
+    .ts-dropdown .option.active, .ts-dropdown .option:hover { background: rgba(14,165,233,.1) !important; color: #0ea5e9 !important; }
+    .ts-control > input { color: #fff !important; font-weight: 700 !important; font-family: inherit !important; }
+    .ts-wrapper.single .ts-control:after { border-color: #64748b transparent transparent transparent !important; }
+    .ts-wrapper.single.dropdown-active .ts-control:after { border-color: transparent transparent #64748b transparent !important; }
 </style>
 
 <script>
 const API = '<?= BASE_URL ?>/api/cartera.php';
 const f   = new Intl.NumberFormat('es-HN', { style:'currency', currency:'HNL' });
 let creditosCache = [];
+let selectCreditosCuotas = null;
+let selectCreditosRecaudo = null;
 
 // ─── Tabs ──────────────────────────────────────────────────────────────────
 function openTab(id) {
@@ -455,17 +471,20 @@ function emptyRow(cols, msg) {
 }
 
 function populateCreditoSelects() {
-    const selCuotas  = document.getElementById('sel-credito-cuotas');
-    const selRecaudo = document.getElementById('sel-recaudo-credito');
-    const opts = creditosCache.map(c =>
-        `<option value="${c.id}">${c.referencia_doc || `CR-${String(c.id).padStart(5,'0')}`} — ${c.tercero_nombre}</option>`
-    ).join('');
-    selCuotas.innerHTML  = '<option value="">— Elija un crédito —</option>' + opts;
-    selRecaudo.innerHTML = '<option value="">— Sin asignar —</option>' + opts;
+    const opts = creditosCache.map(c => ({ value: c.id, text: `${c.referencia_doc || `CR-${String(c.id).padStart(5,'0')}`} — ${c.tercero_nombre}` }));
+    
+    if (selectCreditosCuotas) {
+        selectCreditosCuotas.clearOptions();
+        selectCreditosCuotas.addOptions(opts);
+    }
+    if (selectCreditosRecaudo) {
+        selectCreditosRecaudo.clearOptions();
+        selectCreditosRecaudo.addOptions(opts);
+    }
 }
 
 function verEstadoCuenta(id) {
-    document.getElementById('sel-credito-cuotas').value = id;
+    if (selectCreditosCuotas) selectCreditosCuotas.setValue(id);
     openTab('tab-cuotas');
     loadCuotas(id);
 }
@@ -473,15 +492,20 @@ function verEstadoCuenta(id) {
 // ─── Modals ───────────────────────────────────────────────────────────────
 function openCreditoModal() {
     document.getElementById('form-credito').reset();
+    const selC = document.querySelector('#form-credito select[name="tercero_id"]');
+    if (selC && selC.tomselect) selC.tomselect.clear();
     document.getElementById('modal-credito').classList.replace('hidden','flex');
 }
 function openRecaudoModal() {
     document.getElementById('form-recaudo').reset();
+    const selR = document.querySelector('#form-recaudo select[name="tercero_id"]');
+    if (selR && selR.tomselect) selR.tomselect.clear();
+    if (selectCreditosRecaudo) selectCreditosRecaudo.clear();
     document.getElementById('modal-recaudo').classList.replace('hidden','flex');
 }
 function openRecaudoFor(creditoId) {
     openRecaudoModal();
-    document.getElementById('sel-recaudo-credito').value = creditoId;
+    if (selectCreditosRecaudo) selectCreditosRecaudo.setValue(creditoId);
 }
 function closeModal(id) { document.getElementById(id).classList.replace('flex','hidden'); }
 
@@ -540,6 +564,20 @@ function closeRecibo() { document.getElementById('print-recibo').classList.add('
 
 // ─── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar Tom Selects
+    document.querySelectorAll('.input-field[name="tercero_id"]').forEach(el => {
+        new TomSelect(el, { create: false, placeholder: '— Buscar cliente —', sortField: { field: "text", direction: "asc" } });
+    });
+    
+    selectCreditosCuotas = new TomSelect('#sel-credito-cuotas', {
+        create: false, placeholder: '— Elija un crédito —',
+        onChange: function(val) { loadCuotas(val); }
+    });
+    
+    selectCreditosRecaudo = new TomSelect('#sel-recaudo-credito', {
+        create: false, placeholder: '— Sin asignar —'
+    });
+
     loadCreditos();
     loadRecaudos();
     openTab('creditos');

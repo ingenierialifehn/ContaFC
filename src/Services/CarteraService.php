@@ -23,7 +23,7 @@ class CarteraService
 
     public function getCreditos(int $empresaId, string $estado = 'activo'): array
     {
-        $sql = "SELECT c.*, t.nombre AS tercero_nombre
+        $sql = "SELECT c.*, t.razon_social AS tercero_nombre
                 FROM cartera_creditos c
                 LEFT JOIN terceros t ON t.id = c.tercero_id
                 WHERE c.empresa_id = :eid AND c.estado = :estado
@@ -36,7 +36,7 @@ class CarteraService
     public function getCreditoById(int $id, int $empresaId): ?array
     {
         $st = $this->db->prepare(
-            "SELECT c.*, t.nombre AS tercero_nombre
+            "SELECT c.*, t.razon_social AS tercero_nombre
              FROM cartera_creditos c
              LEFT JOIN terceros t ON t.id = c.tercero_id
              WHERE c.id = :id AND c.empresa_id = :eid"
@@ -161,7 +161,7 @@ class CarteraService
 
     public function getRecaudos(int $empresaId, ?int $creditoId = null): array
     {
-        $sql = "SELECT r.*, t.nombre AS tercero_nombre
+        $sql = "SELECT r.*, t.razon_social AS tercero_nombre
                 FROM cartera_recaudos r
                 LEFT JOIN terceros t ON t.id = r.tercero_id
                 WHERE r.empresa_id = :eid";
