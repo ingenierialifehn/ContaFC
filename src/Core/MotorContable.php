@@ -19,7 +19,7 @@ final class MotorContable
     private const TOLERANCIA = 0.01;
 
     public function __construct(
-        private readonly Database $database
+        private Database $database
     ) {}
 
     /**

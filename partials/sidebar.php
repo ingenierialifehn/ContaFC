@@ -30,6 +30,30 @@ $userIni   = strtoupper(substr($_sidebarUser['nombre'] ?? 'A', 0, 1));
 $user      = $_sidebarUser;   // Aseguramos que $user siempre esté disponible
 $activeNav = $activeNav ?? '';
 
+// ── Módulos activos de la empresa ────────────────────────────────────────
+$_modulosActivos = null;
+try {
+    $_pdo2  = \ContaFC\Core\Database::getInstance()->getPdo();
+    $_mRow  = $_pdo2->prepare("SELECT modulos_activos FROM empresas WHERE id = :id");
+    $_mRow->execute([':id' => \ContaFC\Core\Auth::empresaId()]);
+    $_mFetch = $_mRow->fetch();
+    if ($_mFetch && !empty($_mFetch['modulos_activos'])) {
+        $_modulosActivos = json_decode($_mFetch['modulos_activos'], true);
+    }
+} catch (\Throwable $_mEx) { }
+// Si null → todos activos
+if ($_modulosActivos === null) {
+    $_modulosActivos = [
+        'ecosistema_comercial' => true,
+        'contabilidad_core'    => true,
+        'cartera_cobros'       => true,
+        'reportes'             => true,
+        'tesoreria'            => true,
+    ];
+}
+// Helper
+$_modOn = fn(string $k) => (bool)($_modulosActivos[$k] ?? true);
+
 // Icons
 $iDash   = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>';
 $iPOS    = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
@@ -44,22 +68,20 @@ $iSettings = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 
 $MENU = [
     'General' => [
         ['dashboard',   'dashboard.php', $iDash,   'Resumen Global'],
-        ['reportes',    'reportes.php',  $iChart,  'Reportes & Balances'],
+        ...($_modOn('reportes') ? [['reportes', 'reportes.php', $iChart, 'Reportes & Balances']] : []),
     ],
-    'Ecosistema Comercial' => [
+    'Ecosistema Comercial' => $_modOn('ecosistema_comercial') ? [
         ['pos',         'pos.php',       $iPOS,    'Punto de Venta (POS)'],
         ['factura',     'factura.php',   $iBook,   'Facturación SAR'],
         ['productos',   'productos.php', $iCart,   'Inventario y Kits'],
         ['logistica',   'logistica.php', $iLogistic,'Logística y Envíos'],
         ['contratos',   'contratos.php', $iCont,   'Fact. Recurrente'],
         ['devoluciones','devolucion.php',$iLogistic,'Notas de Crédito'],
-    ],
-    'Contabilidad Core' => [
+    ] : [],
+    'Contabilidad Core' => $_modOn('contabilidad_core') ? [
         ['asiento',     'asiento.php',   $iBook,   'Asientos de Diario'],
         ['comprobantes','comprobantes.php',$iChart, 'Comprobantes'],
         ['activos',     'activos.php',   $iCont,   'Activos Fijos'],
-        ['tesoreria',   'tesoreria_bancos.php', $iPOS, 'Bancos y Tesorería'],
-        ['recurrente',  'tesoreria_recurrentes.php', $iDash, 'Egreso Recurrente'],
         ['cecos',       'cecos.php',     $iChart,  'Centros de Costo'],
         ['proyectos',   'proyectos.php', $iChart,  'Gestión de Proyectos'],
         ['auditoria',   'auditoria.php', $iSettings,'Auditoría & Logs'],
@@ -67,15 +89,20 @@ $MENU = [
         ['libros',      'libros_oficiales.php', $iBook, 'Libros Oficiales'],
         ['puc',         'puc.php',       $iBook,   'Plan de Cuentas'],
         ['terceros',    'terceros.php',  $iSettings,'Clientes y Prov.'],
-    ],
-    'Cartera y Cobros' => [
+    ] : [],
+    'Tesorería' => $_modOn('tesoreria') ? [
+        ['tesoreria',   'tesoreria_bancos.php', $iPOS, 'Bancos y Tesorería'],
+        ['recurrente',  'tesoreria_recurrentes.php', $iDash, 'Egreso Recurrente'],
+    ] : [],
+    'Cartera y Cobros' => $_modOn('cartera_cobros') ? [
         ['cartera',     'cartera.php',   $iChart,  'Créditos y Recaudos'],
-    ],
+    ] : [],
     'Administración' => [
         ['usuarios',    'usuarios.php',  $iSettings,'Usuarios'],
         ['cai',         'cai.php',       $iSettings,'Resoluciones SAR'],
         ['empresas',    'empresas.php',  $iSettings,'Ajustes Multiempresa'],
         ['backups',     'backups.php',   $iSettings,'Copias de Seguridad'],
+        ['modulos',     'modulos.php',   $iDash,   'Módulos del Sistema'],
     ]
 ];
 

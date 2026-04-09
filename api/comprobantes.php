@@ -114,18 +114,24 @@ try {
             echo json_encode($comp);
         } else {
             // Listado de comprobantes
-            $desde  = $_GET['desde'] ?? date('Y-m-01');
-            $hasta  = $_GET['hasta'] ?? date('Y-m-d');
+            $desde  = (!empty($_GET['desde'])) ? $_GET['desde'] : date('Y-m-01');
+            $hasta  = (!empty($_GET['hasta'])) ? $_GET['hasta'] : date('Y-m-d');
             $estado = $_GET['estado'] ?? 'registrado';
             $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
             $offset = ($page - 1) * $limit;
             
-            $stmtCount = $db->prepare("SELECT COUNT(DISTINCT c.id) 
-                                       FROM comprobantes c 
-                                       JOIN asientos a ON c.id = a.comprobante_id 
-                                       WHERE c.empresa_id = :eid AND a.fecha BETWEEN :d AND :h AND c.estado = :e");
-            $stmtCount->execute([':eid' => $eid, ':d' => $desde, ':h' => $hasta, ':e' => $estado]);
+            $where = "WHERE c.empresa_id = :eid AND c.estado = :e 
+                      AND (c.fecha BETWEEN :d AND :h OR EXISTS (SELECT 1 FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha BETWEEN :d2 AND :h2))";
+
+            $stmtCount = $db->prepare("SELECT COUNT(*) FROM comprobantes c $where");
+            $stmtCount->bindValue(':eid', $eid, PDO::PARAM_INT);
+            $stmtCount->bindValue(':d', $desde);
+            $stmtCount->bindValue(':h', $hasta);
+            $stmtCount->bindValue(':d2', $desde);
+            $stmtCount->bindValue(':h2', $hasta);
+            $stmtCount->bindValue(':e', $estado);
+            $stmtCount->execute();
             $totalRecords = (int)$stmtCount->fetchColumn();
 
             // Consulta optimizada para traer totales pre-calculados en la tabla comprobantes
@@ -136,15 +142,16 @@ try {
                     JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
                     LEFT JOIN terceros t ON c.tercero_id = t.id
                     LEFT JOIN usuarios u ON c.usuario_id = u.id
-                    WHERE c.empresa_id = :eid AND c.estado = :e
-                      AND EXISTS (SELECT 1 FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha BETWEEN :d AND :h)
-                    ORDER BY fecha_asiento DESC, c.id DESC
+                    $where
+                    ORDER BY c.fecha DESC, c.id DESC
                     LIMIT :limit OFFSET :offset";
             
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':eid', $eid, PDO::PARAM_INT);
             $stmt->bindValue(':d', $desde);
             $stmt->bindValue(':h', $hasta);
+            $stmt->bindValue(':d2', $desde);
+            $stmt->bindValue(':h2', $hasta);
             $stmt->bindValue(':e', $estado);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);

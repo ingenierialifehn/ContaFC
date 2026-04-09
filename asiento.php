@@ -80,6 +80,33 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
         .autocomplete-item:hover, .autocomplete-item.sel { background:#eff6ff; color:#1e40af; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
         .fade-in { animation:fadeIn .2s ease-out; }
+
+        /* Estilos de Impresión */
+        #printable-area { display: none; }
+        @media print {
+            body { background: white !important; font-size: 10pt; }
+            aside, header, #observaciones, .badge-descuadre, .badge-cuadra, .totals-bar, #status-msg, .flex-shrink-0, .w-px, button { display: none !important; }
+            main { margin: 0 !important; padding: 0 !important; overflow: visible !important; width: 100% !important; }
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; color: black; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { border-bottom: 1.5px solid black; text-align: left; padding: 4px; font-weight: bold; background: transparent !important; color: black !important; }
+            td { padding: 4px; vertical-align: top; border-bottom: 0.5px solid #eee; }
+            .print-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+            .print-title { font-size: 16pt; font-weight: 800; text-decoration: underline; text-align: center; flex: 1; }
+            .print-meta { text-align: right; font-size: 8pt; line-height: 1.2; }
+            .print-sig-area { position: fixed; bottom: 30px; left: 0; width: 100%; display: flex; justify-content: space-around; }
+            .print-sig-line { width: 250px; border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 9pt; visibility: visible !important; }
+            #printable-area .print-sig-line { visibility: visible !important; }
+            .text-right { text-align: right !important; }
+        }
+
+        /* Vista Previa Modal */
+        .preview-container { text-align: left; background: white; padding: 20px; color: black; font-family: 'Inter', sans-serif; border: 1px solid #eee; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        .preview-container table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9pt; }
+        .preview-container th { border-bottom: 1.5px solid black; text-align: left; padding: 6px; font-weight: bold; }
+        .preview-container td { padding: 6px; border-bottom: 1px solid #f1f5f9; }
     </style>
 </head>
 <body class="h-full font-sans flex">
@@ -120,6 +147,11 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-800 transition-all text-xs font-medium">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Exportar
+        </button>
+        <button id="btn-imprimir" title="Imprimir Comprobante" onclick="imprimirComprobante()"
+                class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all text-xs font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Imprimir
         </button>
         <div class="w-px h-10 bg-slate-200 mx-1"></div>
         <button onclick="addLinea()" title="Agregar línea"
@@ -207,8 +239,8 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
         <!-- Observaciones -->
         <div class="mt-2">
-            <input id="observaciones" type="text" placeholder="Observaciones del comprobante..."
-                   class="w-full h-7 px-2 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:bg-white">
+            <textarea id="observaciones" placeholder="Observaciones del comprobante..." rows="2"
+                    class="w-full px-2 py-1 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none"></textarea>
         </div>
     </div>
 
@@ -255,6 +287,7 @@ $editId = isset($_GET['id']) ? (int)$_GET['id'] : null;
         <span id="status-msg" class="text-blue-600"></span>
     </div>
 </main>
+<div id="printable-area"></div>
 
 <!-- ─── JavaScript principal ─────────────────────────────────────────────── -->
 <script>
@@ -350,7 +383,7 @@ function renderGrid(append = false) {
                        ondblclick="abrirCatalogoDocTipo(${i})" title="Doble clic para tipos de doc.">
             </td>
             <td class="editing w-24">
-                <input type="text" class="grid-input font-mono cell-doc-num" value="${esc(l.doc_cruce_num)}" onchange="lineas[${i}].doc_cruce_num=this.value">
+                <input type="text" class="grid-input font-mono cell-doc-num" value="${esc(l.doc_cruce_num)}" onchange="setDocNumAll(${i}, this.value)">
             </td>
             <td class="editing w-24">
                 <input type="text" class="grid-input cell-proyecto" value="${esc(l.proyecto_nombre)}" 
@@ -363,14 +396,20 @@ function renderGrid(append = false) {
                        ondblclick="abrirCatalogoCECO(${i})" title="Doble clic para centros de costo">
             </td>
             <td class="editing w-32">
-                <input type="number" class="grid-input text-right font-mono text-emerald-700 cell-debito"
-                       value="${l.debito > 0 ? parseFloat(l.debito).toFixed(2) : ''}"
-                       onchange="setDebito(${i}, this.value)" id="inp-deb-${i}">
+                <input type="text" class="grid-input text-right font-mono text-emerald-700 cell-debito"
+                       value="${l.debito > 0 ? fmtInp(l.debito) : ''}"
+                       onfocus="this.value = lineas[${i}].debito > 0 ? lineas[${i}].debito : ''"
+                       oninput="setDebito(${i}, this.value)"
+                       onblur="this.value = lineas[${i}].debito > 0 ? fmtInp(lineas[${i}].debito) : ''"
+                       id="inp-deb-${i}">
             </td>
             <td class="editing w-32">
-                <input type="number" class="grid-input text-right font-mono text-blue-700 cell-credito"
-                       value="${l.credito > 0 ? parseFloat(l.credito).toFixed(2) : ''}"
-                       onchange="setCredito(${i}, this.value)" id="inp-cre-${i}">
+                <input type="text" class="grid-input text-right font-mono text-blue-700 cell-credito"
+                       value="${l.credito > 0 ? fmtInp(l.credito) : ''}"
+                       onfocus="this.value = lineas[${i}].credito > 0 ? lineas[${i}].credito : ''"
+                       oninput="setCredito(${i}, this.value)"
+                       onblur="this.value = lineas[${i}].credito > 0 ? fmtInp(lineas[${i}].credito) : ''"
+                       id="inp-cre-${i}">
             </td>
             <td class="editing min-w-40">
                 <input type="text" class="grid-input text-slate-600" value="${esc(l.descripcion)}" onchange="lineas[${i}].descripcion=this.value">
@@ -422,14 +461,31 @@ function selectLinea(idx) {
 
 // ─── Setters de campo ─────────────────────────────────────────────────────
 function setDebito(idx, val) {
-    lineas[idx].debito  = parseFloat(val) || 0;
+    lineas[idx].debito  = Number(String(val).replace(/,/g, '')) || 0;
     lineas[idx].credito = 0;
+    // Limpiar input crédito visualmente si existe
+    const inpCre = document.getElementById(`inp-cre-${idx}`);
+    if (inpCre) inpCre.value = '';
     actualizarTotales();
 }
 function setCredito(idx, val) {
-    lineas[idx].credito = parseFloat(val) || 0;
+    lineas[idx].credito = Number(String(val).replace(/,/g, '')) || 0;
     lineas[idx].debito  = 0;
+    // Limpiar input débito visualmente si existe
+    const inpDeb = document.getElementById(`inp-deb-${idx}`);
+    if (inpDeb) inpDeb.value = '';
     actualizarTotales();
+}
+
+function setDocNumAll(idx, val) {
+    lineas[idx].doc_cruce_num = val;
+    // Propagar a todas las líneas
+    lineas.forEach((l, i) => {
+        l.doc_cruce_num = val;
+        // Actualizar en el DOM si el input existe
+        const inp = document.querySelector(`#row-${i} .cell-doc-num`);
+        if (inp) inp.value = val;
+    });
 }
 
 // ─── Actualizar totales en tiempo real ───────────────────────────────────
@@ -703,6 +759,18 @@ async function anularComprobante() {
         return;
     }
 
+    // Verificar permiso admin
+    const is_admin = <?= Auth::hasRole('admin') ? 'true' : 'false' ?>;
+    if (!is_admin) {
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Acceso Denegado', 
+            text: 'Solo un administrador puede anular comprobantes.',
+            confirmButtonColor: '#ef4444'
+        });
+        return;
+    }
+
     const { value: motivo } = await Swal.fire({
         title: '⚠️ Anular Comprobante',
         html: `
@@ -719,7 +787,7 @@ async function anularComprobante() {
         preConfirm: () => document.getElementById('swal-motivo').value,
     });
 
-    if (typeof value === 'undefined' && !result?.isConfirmed) return;
+    if (motivo === undefined) return; // Si canceló
 
     try {
         Swal.fire({ title:'Anulando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
@@ -735,6 +803,116 @@ async function anularComprobante() {
     } catch(e) {
         await Swal.fire({ icon:'error', title:'Error de conexión' });
     }
+}
+
+// ─── Imprimir Comprobante (Formato Partida con Vista Previa) ──────────────
+async function imprimirComprobante() {
+    syncCurrentLines(); // Asegurar que el array tenga lo último escrito en el DOM
+
+    const tComp = document.getElementById('tipo_comp_id').options[document.getElementById('tipo_comp_id').selectedIndex].text;
+    const nComp = document.getElementById('numero_comp').value;
+    const fVal  = document.getElementById('fecha').value;
+    const fDoc  = fVal ? new Date(fVal + 'T00:00:00').toLocaleDateString() : 'N/A';
+    const obs   = document.getElementById('observaciones').value;
+    const usr   = '<?= strtoupper($user['username']) ?>';
+    const emp   = '<?= strtoupper($empresa['nombre']) ?>';
+    
+    let rowsHtml = '';
+    let totalD = 0;
+    let totalC = 0;
+
+    lineas.forEach(l => {
+        if (!l.cuenta_id && l.debito === 0 && l.credito === 0) return;
+        totalD += l.debito;
+        totalC += l.credito;
+        rowsHtml += `
+            <tr>
+                <td style="font-family: monospace;">${l.cuenta_codigo || ''}</td>
+                <td style="font-size: 8pt;">${l.cuenta_nombre || ''}</td>
+                <td style="font-size: 8pt;">${l.tercero_nombre || ''}</td>
+                <td style="font-size: 8pt;">${l.doc_cruce_tipo || ''} ${l.doc_cruce_num || ''}</td>
+                <td class="text-right">${l.debito > 0 ? fmtInp(l.debito) : '.00'}</td>
+                <td class="text-right">${l.credito > 0 ? fmtInp(l.credito) : '.00'}</td>
+            </tr>`;
+    });
+
+    const headerHtml = `
+        <div class="print-header">
+            <div>
+                <div style="font-weight: bold; font-size: 11pt;">VILLA FRANCIS</div>
+                <div style="font-size: 8pt; margin-top: 2px;">${emp}</div>
+            </div>
+            <div class="print-title">COMPROBANTE DE CONTABILIDAD</div>
+            <div class="print-meta">
+                <div>ContaFC</div>
+                <div>Impreso el día ${new Date().toLocaleDateString()}</div>
+                <div>USUARIO: ${usr}</div>
+                <div style="font-size: 14pt; font-weight: bold; margin-top: 4px;">${nComp}</div>
+            </div>
+        </div>
+        <div style="margin-top: 10px; font-size: 9pt;">
+            <div style="display: flex; gap: 40px;">
+                <div><span style="font-weight: bold;">FECHA DOC.</span> &nbsp;&nbsp; ${fDoc}</div>
+                <div style="flex: 1; text-align: center; font-weight: bold; text-transform: uppercase;">${tComp}</div>
+            </div>
+            <div style="margin-top: 4px;"><span style="font-weight: bold;">DESCRIPCION:</span> ${obs}</div>
+        </div>`;
+
+    const tableHtml = `
+        <table>
+            <thead>
+                <tr>
+                    <th width="12%">CUENTA</th>
+                    <th width="28%">DESCRIPCION</th>
+                    <th width="25%">TERCERO</th>
+                    <th width="15%">DOC. CRUCE</th>
+                    <th width="10%" class="text-right">DEBITOS</th>
+                    <th width="10%" class="text-right">CREDITOS</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rowsHtml}
+                <tr style="border-top: 1.5pt solid black; font-weight: bold;">
+                    <td colspan="4" class="text-right">Totales</td>
+                    <td class="text-right">${fmtInp(totalD)}</td>
+                    <td class="text-right">${fmtInp(totalC)}</td>
+                </tr>
+            </tbody>
+        </table>`;
+
+    const footerHtml = `
+        <div class="print-sig-area">
+            <div class="print-sig-line">Realizado por:</div>
+            <div class="print-sig-line">Revisado por:</div>
+        </div>`;
+
+    // 1. Mostrar vista previa
+    const { isConfirmed } = await Swal.fire({
+        title: 'Vista Previa de Comprobante',
+        html: `<div class="preview-container">${headerHtml}${tableHtml}</div>`,
+        width: '900px',
+        showCancelButton: true,
+        confirmButtonText: '🖨️ Imprimir Ahora',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: '#1e3a5f',
+    });
+
+    if (isConfirmed) {
+        const p = document.getElementById('printable-area');
+        p.innerHTML = headerHtml + tableHtml + footerHtml;
+        window.print();
+    }
+}
+
+function syncCurrentLines() {
+    // Sincronizar descripciones y montos que puedan estar sin blur
+    lineas.forEach((l, i) => {
+        const inpDeb = document.getElementById(`inp-deb-${i}`);
+        const inpCre = document.getElementById(`inp-cre-${i}`);
+        if (inpDeb) l.debito  = Number(String(inpDeb.value).replace(/,/g, '')) || 0;
+        if (inpCre) l.credito = Number(String(inpCre.value).replace(/,/g, '')) || 0;
+    });
+    actualizarTotales();
 }
 
 // ─── Cargar comprobante existente ─────────────────────────────────────────
@@ -784,6 +962,9 @@ function handleGridKey(e, idx, col) {
 // ─── Helpers ─────────────────────────────────────────────────────────────
 function fmt(v) {
     return new Intl.NumberFormat('es-HN', { style:'currency', currency:'HNL', minimumFractionDigits:2 }).format(v||0);
+}
+function fmtInp(v) {
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }).format(v||0);
 }
 function esc(s) {
     if (!s) return '';

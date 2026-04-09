@@ -13,7 +13,7 @@ use RuntimeException;
 final class Database
 {
     private static ?Database $instance = null;
-    private readonly PDO $pdo;
+    private PDO $pdo;
 
     private function __construct()
     {

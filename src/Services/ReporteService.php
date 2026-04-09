@@ -11,7 +11,7 @@ use ContaFC\Core\Database;
 final class ReporteService
 {
     public function __construct(
-        private readonly Database $database
+        private Database $database
     ) {}
 
     /**
