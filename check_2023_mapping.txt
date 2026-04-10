@@ -5,7 +5,7 @@ Array
         (
             [id] => 9999
             [fecha] => 2023-01-01
-            [periodo_id] => 1
+            [periodo_id] => 13
         )
 
 )
@@ -140,6 +140,17 @@ Array
             [empresa_id] => 1
             [anio] => 2026
             [mes] => 12
+            [estado] => abierto
+            [fecha_cierre] => 
+            [usuario_cierre_id] => 
+        )
+
+    [12] => Array
+        (
+            [id] => 13
+            [empresa_id] => 1
+            [anio] => 2023
+            [mes] => 1
             [estado] => abierto
             [fecha_cierre] => 
             [usuario_cierre_id] => 

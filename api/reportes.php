@@ -110,7 +110,7 @@ try {
                     a.descripcion, a.debito, a.credito, cu.codigo as cuenta_cod
              FROM asientos a
              JOIN comprobantes c ON a.comprobante_id = c.id
-             JOIN tipos_comprobante tc ON c.tipo_id = tc.id
+             JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
              JOIN puc_cuentas cu ON a.cuenta_id = cu.id
              LEFT JOIN terceros t ON a.tercero_id = t.id
              WHERE c.empresa_id = :eid AND c.fecha BETWEEN :d AND :h 

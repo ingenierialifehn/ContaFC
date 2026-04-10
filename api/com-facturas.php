@@ -107,7 +107,7 @@ try {
     $tipoId = $stmtT->fetchColumn() ?: 1;
 
     $stmtComp = $db->prepare(
-        "INSERT INTO comprobantes (empresa_id, tipo_id, numero, fecha, tercero_id, observaciones, usuario_id, estado)
+        "INSERT INTO comprobantes (empresa_id, tipo_comp_id, numero, fecha, tercero_id, observaciones, usuario_id, estado)
          VALUES (:eid, :tid, :num, :fec, :ter, :obs, :uid, 'registrado')"
     );
     $stmtComp->execute([

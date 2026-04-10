@@ -77,9 +77,10 @@ $activeNav = 'comprobantes';
         <div>
             <label class="block text-xs text-slate-500 mb-1 font-medium">Estado</label>
             <select id="f-estado" class="h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                <option value="registrado">Registrados</option>
+                <option value="registrado" selected>Registrados</option>
                 <option value="borrador">Borradores</option>
                 <option value="anulado">Anulados</option>
+                <option value="todos">Cualquier estado</option>
             </select>
         </div>
         <button onclick="cargarListado()" 
@@ -161,6 +162,7 @@ async function cargarListado(page = 1) {
         const json = await res.json();
         const data = json.data || [];
         const pag  = json.pagination || {};
+        const filtersRelaxed = !!json.filters_relaxed;
 
         if (!data.length) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-500">No se encontraron comprobantes para el filtro aplicado.</td></tr>';
@@ -198,7 +200,10 @@ async function cargarListado(page = 1) {
 
         const start = ((pag.page - 1) * pag.limit) + 1;
         const end   = Math.min(pag.page * pag.limit, pag.total);
-        document.getElementById('info-count').innerHTML = `Mostrando <span class="font-bold text-slate-800">${start}-${end}</span> de <span class="font-bold text-slate-800">${pag.total}</span> registros`;
+        const infoBase = `Mostrando <span class="font-bold text-slate-800">${start}-${end}</span> de <span class="font-bold text-slate-800">${pag.total}</span> registros`;
+        document.getElementById('info-count').innerHTML = filtersRelaxed
+            ? `${infoBase} <span class="text-amber-600">· Se mostraron todos los comprobantes disponibles porque el rango no encontró coincidencias.</span>`
+            : infoBase;
         
         updatePaginationControls(pag.page, pag.pages);
 

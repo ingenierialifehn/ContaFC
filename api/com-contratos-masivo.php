@@ -72,7 +72,7 @@ try {
         $db->prepare("UPDATE com_contratos SET ultima_factura = :hoy WHERE id = :id")->execute([':hoy' => $hoy, ':id' => $c['id']]);
 
         // GENERAR ASIENTO (Simplificado para masivo)
-        $stComp = $db->prepare("INSERT INTO comprobantes (empresa_id, tipo_id, numero, fecha, tercero_id, observaciones, usuario_id, estado) VALUES (:eid, 1, :num, :fec, :ter, :obs, :uid, 'registrado')");
+        $stComp = $db->prepare("INSERT INTO comprobantes (empresa_id, tipo_comp_id, numero, fecha, tercero_id, observaciones, usuario_id, estado) VALUES (:eid, 1, :num, :fec, :ter, :obs, :uid, 'registrado')");
         $stComp->execute([':eid' => $eid, ':num' => $prox, ':fec' => $hoy, ':ter' => $c['cliente_id'], ':obs' => "FACTURACION MASIVA CONTRATO #{$c['id']}", ':uid' => $uid]);
 
         $count++;

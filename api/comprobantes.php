@@ -14,6 +14,7 @@ $db  = Database::getInstance()->getPdo();
 $eid = Auth::empresaId();
 $uid = Auth::userId();
 $method = $_SERVER['REQUEST_METHOD'];
+$asientosTieneFecha = tableHasColumn($db, 'asientos', 'fecha');
 
 try {
     if ($method === 'POST') {
@@ -38,7 +39,7 @@ try {
         );
         
         // Generar número automático (ejemplo simple: max+1 por tipo y empresa)
-        $numStmt = $db->prepare("SELECT COALESCE(MAX(numero), 0) + 1 FROM comprobantes WHERE empresa_id = :eid AND tipo_id = :tid");
+        $numStmt = $db->prepare("SELECT COALESCE(MAX(numero), 0) + 1 FROM comprobantes WHERE empresa_id = :eid AND tipo_comp_id = :tid");
         $numStmt->execute([':eid' => $eid, ':tid' => $body['tipo_comp_id']]);
         $numero = $numStmt->fetchColumn();
 
@@ -61,25 +62,29 @@ try {
 
         // 2. Insertar Líneas de Asiento
         $stmtLinea = $db->prepare(
-            "INSERT INTO asientos (comprobante_id, cuenta_id, debito, credito, tercero_id, descripcion, documento_referencia, fecha)
-             VALUES (:cid, :cta, :deb, :cre, :ter, :des, :ref, :fec)"
+            "INSERT INTO asientos (comprobante_id, empresa_id, linea, cuenta_id, debito, credito, tercero_id, descripcion, doc_cruce_tipo, doc_cruce_num, fecha)
+             VALUES (:cid, :eid, :lin, :cta, :deb, :cre, :ter, :des, :dct, :dcn, :fec)"
         );
 
+        $lineaIdx = 1;
         foreach ($body['lineas'] as $l) {
             $stmtLinea->execute([
                 ':cid' => $compId,
+                ':eid' => $eid,
+                ':lin' => $lineaIdx++,
                 ':cta' => $l['cuenta_id'],
                 ':deb' => $l['debito'],
                 ':cre' => $l['credito'],
                 ':ter' => $l['tercero_id'] ?: null,
                 ':des' => $l['descripcion'] ?: null,
-                ':ref' => $l['documento_referencia'] ?? null,
+                ':dct' => $l['doc_cruce_tipo'] ?? null,
+                ':dcn' => $l['doc_cruce_num'] ?? null,
                 ':fec' => $l['fecha'] ?? $body['fecha']
             ]);
             
             // 3. Afectar Cuentas por Cobrar/Pagar si aplica (Opcional en esta fase, pero planeado)
             // 4. Actualizar Saldos de Cuenta (Optimización para reportes)
-            actualizarSaldoCuenta($db, (int)$l['cuenta_id'], (float)$l['debito'], (float)$l['credito'], $body['fecha']);
+            actualizarSaldoCuenta($db, $eid, $pid, (int)$l['cuenta_id'], (float)$l['debito'], (float)$l['credito']);
         }
 
         $db->commit();
@@ -88,8 +93,11 @@ try {
     elseif ($method === 'GET') {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
         if ($id) {
+            $fechaOperativaSql = $asientosTieneFecha
+                ? "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_operativa,"
+                : "c.fecha AS fecha_operativa,";
             $stmt = $db->prepare(
-                "SELECT c.*, t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo, u.username as usuario_registro
+                "SELECT c.*, {$fechaOperativaSql} t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo, u.username as usuario_registro
                  FROM comprobantes c
                  LEFT JOIN terceros t ON c.tercero_id = t.id
                  JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
@@ -120,45 +128,87 @@ try {
             $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
             $offset = ($page - 1) * $limit;
+            $filtroAmpliado = false;
             
-            $where = "WHERE c.empresa_id = :eid AND c.estado = :e 
-                      AND (c.fecha BETWEEN :d AND :h OR EXISTS (SELECT 1 FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha BETWEEN :d2 AND :h2))";
+            $whereEstado = ($estado === 'todos') ? "1=1" : "c.estado = :e";
+            $whereBase = "WHERE c.empresa_id = :eid
+                          AND $whereEstado";
+            $whereFecha = $asientosTieneFecha
+                ? "AND (
+                        c.fecha BETWEEN :d AND :h
+                        OR EXISTS (
+                            SELECT 1
+                            FROM asientos a
+                            WHERE a.comprobante_id = c.id
+                              AND a.fecha BETWEEN :d2 AND :h2
+                        )
+                    )"
+                : "AND c.fecha BETWEEN :d AND :h";
+            $where = "$whereBase
+                      $whereFecha";
 
             $stmtCount = $db->prepare("SELECT COUNT(*) FROM comprobantes c $where");
             $stmtCount->bindValue(':eid', $eid, PDO::PARAM_INT);
+            if ($estado !== 'todos') $stmtCount->bindValue(':e', $estado);
             $stmtCount->bindValue(':d', $desde);
             $stmtCount->bindValue(':h', $hasta);
-            $stmtCount->bindValue(':d2', $desde);
-            $stmtCount->bindValue(':h2', $hasta);
-            $stmtCount->bindValue(':e', $estado);
+            if ($asientosTieneFecha) {
+                $stmtCount->bindValue(':d2', $desde);
+                $stmtCount->bindValue(':h2', $hasta);
+            }
             $stmtCount->execute();
             $totalRecords = (int)$stmtCount->fetchColumn();
 
-            // Consulta optimizada para traer totales pre-calculados en la tabla comprobantes
+            // Si la fecha no encuentra nada, devolvemos todos los comprobantes
+            // disponibles para no perder registros históricos migrados con fechas
+            // de cabecera inconsistentes.
+            if ($totalRecords === 0) {
+                $stmtCountAll = $db->prepare("SELECT COUNT(*) FROM comprobantes c $whereBase");
+                $stmtCountAll->bindValue(':eid', $eid, PDO::PARAM_INT);
+                if ($estado !== 'todos') $stmtCountAll->bindValue(':e', $estado);
+                $stmtCountAll->execute();
+                $totalAllRecords = (int)$stmtCountAll->fetchColumn();
+
+                if ($totalAllRecords > 0) {
+                    $where = $whereBase;
+                    $totalRecords = $totalAllRecords;
+                    $filtroAmpliado = true;
+                }
+            }
+
+            // Exponemos la fecha de cabecera también como fecha_asiento para no romper el frontend.
+            $fechaAsientoSql = $asientosTieneFecha
+                ? "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_asiento,"
+                : "c.fecha AS fecha_asiento,";
             $sql = "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.razon_social as tercero,
-                           (SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id) AS fecha_asiento,
+                           {$fechaAsientoSql}
                            u.username as usuario_modifico
                     FROM comprobantes c
                     JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
                     LEFT JOIN terceros t ON c.tercero_id = t.id
                     LEFT JOIN usuarios u ON c.usuario_id = u.id
                     $where
-                    ORDER BY c.fecha DESC, c.id DESC
+                    ORDER BY fecha_asiento DESC, c.id DESC
                     LIMIT :limit OFFSET :offset";
             
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':eid', $eid, PDO::PARAM_INT);
-            $stmt->bindValue(':d', $desde);
-            $stmt->bindValue(':h', $hasta);
-            $stmt->bindValue(':d2', $desde);
-            $stmt->bindValue(':h2', $hasta);
-            $stmt->bindValue(':e', $estado);
+            if ($estado !== 'todos') $stmt->bindValue(':e', $estado);
+            if (!$filtroAmpliado) {
+                $stmt->bindValue(':d', $desde);
+                $stmt->bindValue(':h', $hasta);
+                if ($asientosTieneFecha) {
+                    $stmt->bindValue(':d2', $desde);
+                    $stmt->bindValue(':h2', $hasta);
+                }
+            }
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
 
             echo json_encode([
                 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'filters_relaxed' => $filtroAmpliado,
                 'pagination' => [
                     'total' => $totalRecords,
                     'page' => $page,
@@ -177,15 +227,37 @@ try {
 /**
  * Actualiza la tabla de saldos_periodo para reportes veloces (Balance/Estado Resultados)
  */
-function actualizarSaldoCuenta($db, int $cuentaId, float $debito, float $credito, string $fecha) {
-    $anio = (int)date('Y', strtotime($fecha));
-    $mes  = (int)date('m', strtotime($fecha));
-    
+function actualizarSaldoCuenta($db, int $empresaId, int $periodoId, int $cuentaId, float $debito, float $credito) {
     // Upsert saldo del periodo
     $stmt = $db->prepare(
-        "INSERT INTO saldos_periodo (cuenta_id, anio, mes, debito, credito)
-         VALUES (:cta, :anio, :mes, :deb, :cre)
-         ON DUPLICATE KEY UPDATE debito = debito + :deb, credito = credito + :cre"
+        "INSERT INTO saldos_periodo (empresa_id, periodo_id, cuenta_id, total_debito, total_credito)
+         VALUES (:eid, :pid, :cta, :deb, :cre)
+         ON DUPLICATE KEY UPDATE total_debito = total_debito + VALUES(total_debito), total_credito = total_credito + VALUES(total_credito)"
     );
-    $stmt->execute([':cta' => $cuentaId, ':anio' => $anio, ':mes' => $mes, ':deb' => $debito, ':cre' => $credito]);
+    $stmt->execute([':eid' => $empresaId, ':pid' => $periodoId, ':cta' => $cuentaId, ':deb' => $debito, ':cre' => $credito]);
+}
+
+function tableHasColumn(PDO $db, string $table, string $column): bool {
+    static $cache = [];
+
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    $stmt = $db->prepare(
+        "SELECT 1
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table
+           AND COLUMN_NAME = :column
+         LIMIT 1"
+    );
+    $stmt->execute([
+        ':table' => $table,
+        ':column' => $column,
+    ]);
+
+    $cache[$key] = (bool)$stmt->fetchColumn();
+    return $cache[$key];
 }

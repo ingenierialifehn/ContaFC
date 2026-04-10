@@ -63,8 +63,15 @@ $activeNav = 'empresas';
 let empresasCache = [];
 const isAdmin = <?= $user['rol'] === 'admin' ? 'true' : 'false' ?>;
 const empresaActualId = <?= $empresaActualId ?>;
+const baseUrl = '<?= BASE_URL ?>';
 
 document.addEventListener('DOMContentLoaded', cargarEmpresas);
+
+function resolveMediaUrl(path) {
+    if (!path) return '';
+    if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path;
+    return `${baseUrl}/${String(path).replace(/^\/+/, '')}`;
+}
 
 async function cargarEmpresas() {
     const grid = document.getElementById('emp-grid');
@@ -81,6 +88,10 @@ async function cargarEmpresas() {
 
     grid.innerHTML = empresasCache.map(e => {
         const isSelected = e.id == empresaActualId;
+        const logoUrl = resolveMediaUrl(e.logo_path);
+        const logoMarkup = logoUrl
+            ? `<img src="${logoUrl}" alt="Logo de ${e.nombre}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 bg-white">`
+            : `<div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase">${e.nombre.charAt(0)}</div>`;
         return `
         <div class="bg-white rounded-2xl border ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200'} shadow-sm p-6 flex flex-col transition hover:shadow-md relative overflow-hidden">
             ${isSelected ? `
@@ -89,9 +100,7 @@ async function cargarEmpresas() {
             </div>` : ''}
             
             <div class="flex items-center gap-4 mb-5">
-                <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase">
-                    ${e.nombre.charAt(0)}
-                </div>
+                ${logoMarkup}
                 <div>
                     <h3 class="font-bold text-slate-800 text-base leading-tight">${e.nombre}</h3>
                     <p class="text-[11px] text-slate-400 font-mono mt-1">RTN: ${e.nit || '—'}</p>
