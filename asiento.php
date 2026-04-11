@@ -454,9 +454,9 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
                 <!-- Número -->
                 <div class="flex-shrink-0 w-20">
                     <label class="block text-xs text-slate-500 mb-1 font-medium">Nº</label>
-                    <input id="numero_comp" type="text" readonly value="AUTO"
-                        class="h-8 px-2 w-full border border-slate-200 rounded text-sm bg-slate-50 text-slate-500 font-mono"
-                        title="Consecutivo automático">
+                    <input id="numero_comp" type="text" readonly value=""
+                        class="h-8 px-2 w-full border border-slate-200 rounded text-sm bg-slate-50 text-slate-800 font-mono"
+                        placeholder="AUTO" title="Número automático">
                 </div>
 
                 <!-- Tercero (autocomplete) -->
@@ -470,7 +470,7 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
                 <!-- Fecha -->
                 <div class="flex-shrink-0">
-                    <label class="block text-xs text-slate-500 mb-1 font-medium">Fecha</label>
+                    <label class="block text-xs text-slate-500 mb-1 font-medium">Fecha Comprobante</label>
                     <input id="fecha" type="date" value="<?= date('Y-m-d') ?>"
                         class="h-8 px-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
                 </div>
@@ -524,7 +524,7 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
                                 <th class="px-2 py-2 text-right w-32">Débito</th>
                                 <th class="px-2 py-2 text-right w-32">Crédito</th>
                                 <th class="px-2 py-2 text-left min-w-40">Descripción</th>
-                                <th class="px-2 py-2 text-left w-24">Fecha</th>
+                                <th class="px-2 py-2 text-left w-24">Fecha Operación</th>
                             </tr>
                         </thead>
                         <tbody id="cuerpo-grid">
@@ -762,7 +762,7 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
             document.getElementById('tot-dif').textContent = fmt(dif);
 
             const badge = document.getElementById('badge-pd');
-            badge.textContent = cuadra ? 'PD ✓' : 'PD ✗';
+            badge.textContent = cuadra ? 'Cuadrado ✓' : 'Descuadrado ✗';
             badge.className = 'px-2 py-0.5 rounded-full text-xs font-bold text-white ' + (cuadra ? 'badge-cuadra' : 'badge-descuadre');
             badge.style.opacity = '1';
         }
@@ -997,10 +997,11 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
                 if (res.ok && json.success) {
                     comprobanteId = json.comprobante_id;
+                    document.getElementById('numero_comp').value = json.numero || '';
                     await Swal.fire({
                         icon: 'success',
                         title: '¡Comprobante Registrado!',
-                        html: `<div class="text-slate-600">ID: <span class="font-mono font-bold text-blue-700">#${json.comprobante_id}</span></div>`,
+                        html: `<div class="text-slate-600">No. <span class="font-mono font-bold text-blue-700">${json.numero}</span></div>`,
                         timer: 3500,
                         timerProgressBar: true,
                         toast: true,
@@ -1072,9 +1073,9 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
         // ─── Imprimir Comprobante (Formato Partida con Vista Previa) ──────────────
         async function imprimirComprobante() {
             if (!comprobanteId) {
-                Swal.fire({ 
-                    icon: 'warning', 
-                    title: 'Documento no guardado', 
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Documento no guardado',
                     text: 'Debe guardar el comprobante antes de poder imprimirlo.',
                     confirmButtonColor: '#2563eb'
                 });
@@ -1197,6 +1198,7 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
             document.getElementById('fecha').value = data.fecha_operativa || data.fecha || '';
             document.getElementById('observaciones').value = data.observaciones || '';
             document.getElementById('tercero_input').value = data.tercero || '';
+            document.getElementById('numero_comp').value = data.numero || '';
             // Seleccionar tipo
             const sel = document.getElementById('tipo_comp_id');
             for (let i = 0; i < sel.options.length; i++) {
@@ -1533,3 +1535,4 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 </body>
 
 </html>
+

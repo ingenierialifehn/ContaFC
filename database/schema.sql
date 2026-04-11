@@ -370,3 +370,11 @@ END//
 DELIMITER ;
 
 SET foreign_key_checks = 1;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ContaFC – Inicialización de Usuario MySQL
+-- ═══════════════════════════════════════════════════════════════════════════
+GRANT ALL PRIVILEGES ON contafc.* TO 'contafc_user'@'%';
+GRANT ALL PRIVILEGES ON contafc.* TO 'contafc_user'@'localhost';
+FLUSH PRIVILEGES;
