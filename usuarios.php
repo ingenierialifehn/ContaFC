@@ -10,6 +10,7 @@ Auth::requireRol('admin');
 
 $db = Database::getInstance()->getPdo();
 $empresasDisponibles = $db->query("SELECT id, nombre FROM empresas ORDER BY nombre")->fetchAll();
+$proyectosDisponibles = $db->query("SELECT id, nombre, empresa_id FROM proyectos ORDER BY nombre")->fetchAll();
 
 $pageTitle = 'Control de Usuarios (RBAC)';
 $activeNav = 'usuarios';
@@ -97,6 +98,7 @@ try {
                                 <th class="px-10 py-6">Usuario & Correo</th>
                                 <th class="px-10 py-6 text-center">Rol</th>
                                 <th class="px-10 py-6 text-center">Empresas</th>
+                                <th class="px-10 py-6 text-center">Proyectos</th>
                                 <th class="px-10 py-6 text-center">Estado</th>
                                 <th class="px-10 py-6 text-right">Acciones</th>
                             </tr>
@@ -118,6 +120,7 @@ try {
 
 <script>
 const EMPRESAS = <?= json_encode($empresasDisponibles) ?>;
+const PROYECTOS = <?= json_encode($proyectosDisponibles) ?>;
 const MODULOS = [
     { cat: 'General', items: [
         { key: 'dashboard', label: 'Tablero (Dashboard)' },
@@ -238,6 +241,16 @@ function render(data) {
                 </div>
             </td>
             <td class="px-10 py-7 text-center">
+                <div class="flex justify-center -space-x-3">
+                    ${(u.proyectos || []).map(p => `
+                        <div class="w-9 h-9 rounded-xl bg-indigo-600 border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-sm ring-4 ring-white" title="${p.nombre}">
+                            ${p.nombre.charAt(0)}
+                        </div>
+                    `).join('')}
+                    ${(u.proyectos || []).length === 0 ? '<span class="text-[9px] font-black text-slate-300">Todos</span>' : ''}
+                </div>
+            </td>
+            <td class="px-10 py-7 text-center">
                 <button onclick="toggle(${u.id}, ${u.activo})" class="text-[10px] font-black uppercase tracking-widest ${u.activo == 1 ? 'text-emerald-500' : 'text-rose-400'} hover:underline">
                     ${u.activo == 1 ? '● Activo' : '○ Inactivo'}
                 </button>
@@ -266,7 +279,7 @@ async function toggle(id, current) {
 }
 
 function abrirModalUsuario(id = null) {
-    const u = id ? usuarios.find(x => x.id == id) : { id:null, username:'', nombre:'', email:'', rol:'consulta', empresas:[], permisos:{} };
+    const u = id ? usuarios.find(x => x.id == id) : { id:null, username:'', nombre:'', email:'', rol:'consulta', empresas:[], proyectos:[], permisos:{} };
     
     // Asegurarnos que permisos sea un objeto
     if (typeof u.permisos !== 'object' || u.permisos === null) {
@@ -319,7 +332,7 @@ function abrirModalUsuario(id = null) {
 
                 <!-- Empresas -->
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                    <div class="text-[10px] font-black text-honduras uppercase tracking-[0.2em] mb-4">Acceso a Entidades</div>
+                    <div class="text-[10px] font-black text-honduras uppercase tracking-[0.2em] mb-4">Acceso a Entidades (Empresas)</div>
                     <div class="grid grid-cols-2 gap-2">
                         ${EMPRESAS.map(e => `
                         <label class="flex items-center gap-3 p-3.5 bg-slate-50/50 border border-transparent rounded-2xl cursor-pointer hover:border-honduras/20 transition-all group">
@@ -328,6 +341,27 @@ function abrirModalUsuario(id = null) {
                         </label>
                         `).join('')}
                     </div>
+                </div>
+
+                <!-- Proyectos -->
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-4">Acceso a Proyectos</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${PROYECTOS.map(p => {
+                            const emp = EMPRESAS.find(ex => ex.id == p.empresa_id);
+                            return `
+                            <label class="flex items-center gap-3 p-3.5 bg-slate-50/50 border border-transparent rounded-2xl cursor-pointer hover:border-indigo-600/20 transition-all group">
+                                <input type="checkbox" name="pid" value="${p.id}" ${u.proyectos.some(x => x.id == p.id) ? 'checked' : ''} class="w-5 h-5 text-indigo-600 rounded-lg border-2 border-slate-200">
+                                <div class="flex flex-col">
+                                    <span class="text-[11px] font-black text-slate-600 group-hover:text-slate-900">${p.nombre}</span>
+                                    <span class="text-[8px] font-bold text-slate-400 uppercase">${emp ? emp.nombre : 'Unknown'}</span>
+                                </div>
+                            </label>
+                            `;
+                        }).join('')}
+                        ${PROYECTOS.length === 0 ? '<p class="text-[10px] font-bold text-slate-400 p-4 border-2 border-dashed border-slate-100 rounded-2xl text-center col-span-2">No hay proyectos registrados aún.</p>' : ''}
+                    </div>
+                    <p class="mt-4 text-[9px] font-medium text-slate-400 italic">Si no selecciona ningún proyecto, el usuario podrá ver todos los proyectos de las empresas a las que tiene acceso (Admin behavior or Default).</p>
                 </div>
 
                 <!-- Permisos Detallados -->
@@ -444,6 +478,8 @@ function abrirModalUsuario(id = null) {
             if (!data.username || !data.nombre) { Swal.showValidationMessage('Datos incompletos'); return false; }
             if (!id && !data.password) { Swal.showValidationMessage('Contraseña obligatoria para nuevos usuarios'); return false; }
             
+            data.proyecto_ids = Array.from(document.querySelectorAll('input[name="pid"]:checked')).map(x => x.value);
+
             return data;
         }
     }).then(res => {

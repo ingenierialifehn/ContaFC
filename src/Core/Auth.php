@@ -44,6 +44,21 @@ final class Auth
         }
         $user['empresas'] = $stmtE->fetchAll();
 
+        // Obtener proyectos asociados
+        if ($user['rol'] === 'admin') {
+            $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id FROM proyectos WHERE activo = 1");
+            $stmtP->execute();
+        } else {
+            $stmtP = $pdo->prepare(
+                "SELECT p.id, p.nombre, p.empresa_id 
+                 FROM proyectos p 
+                 JOIN usuarios_proyectos up ON p.id = up.proyecto_id 
+                 WHERE up.usuario_id = :uid AND p.activo = 1"
+            );
+            $stmtP->execute([':uid' => $user['id']]);
+        }
+        $user['proyectos'] = $stmtP->fetchAll();
+
         return $user;
     }
 
@@ -101,8 +116,26 @@ final class Auth
                 $stmt->execute([':uid' => $user['id']]);
             }
             $_SESSION['user']['empresas'] = $stmt->fetchAll();
+
+            // Hidratar proyectos
+            if ($user['rol'] === 'admin') {
+                $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id FROM proyectos WHERE activo = 1 ORDER BY nombre");
+                $stmtP->execute();
+            } else {
+                $stmtP = $pdo->prepare(
+                    "SELECT p.id, p.nombre, p.empresa_id
+                     FROM proyectos p
+                     JOIN usuarios_proyectos up ON p.id = up.proyecto_id
+                     WHERE up.usuario_id = :uid AND p.activo = 1
+                     ORDER BY p.nombre"
+                );
+                $stmtP->execute([':uid' => $user['id']]);
+            }
+            $_SESSION['user']['proyectos'] = $stmtP->fetchAll();
+
         } catch (\Throwable $e) {
             $_SESSION['user']['empresas'] = [];
+            $_SESSION['user']['proyectos'] = [];
         }
 
         return $_SESSION['user'];
@@ -110,6 +143,25 @@ final class Auth
 
     public static function empresaId(): int { return (int)($_SESSION['empresa'] ?? 0); }
     public static function userId(): int { return (int)(self::user()['id'] ?? 0); }
+
+    /**
+     * Devuelve los IDs de los proyectos a los que el usuario tiene acceso en la empresa actual.
+     * Si no tiene restricciones, devuelve un array vacío (significa todos).
+     */
+    public static function getAssignedProjectIds(): array
+    {
+        $user = self::user();
+        if (!$user || $user['rol'] === 'admin') return [];
+
+        $eid = self::empresaId();
+        $pids = [];
+        foreach (($user['proyectos'] ?? []) as $p) {
+            if ((int)$p['empresa_id'] === $eid) {
+                $pids[] = (int)$p['id'];
+            }
+        }
+        return $pids;
+    }
 
     public static function requireAuth(): void
     {
