@@ -45,7 +45,7 @@ try {
             }
             echo json_encode(['data' => $stmt->fetchAll()]);
         }
-    elseif ($method === 'POST') {
+    } elseif ($method === 'POST') {
         $requestedMethod = strtoupper((string)($_POST['_method'] ?? 'POST'));
         $data = getProyectosRequestData();
         
