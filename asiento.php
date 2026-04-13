@@ -1090,6 +1090,8 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
             const obs = document.getElementById('observaciones').value;
             const usr = '<?= strtoupper($user['username']) ?>';
             const emp = '<?= strtoupper($empresa['nombre']) ?>';
+            const logoPath = '<?= $empresa['logo_path'] ?? '' ?>';
+            const logoHtml = logoPath ? `<img src="<?= BASE_URL ?>/${logoPath}" style="max-height: 50px; max-width: 150px; margin-right: 15px; border-radius: 4px;" alt="Logo"/>` : '';
 
             let rowsHtml = '';
             let totalD = 0;

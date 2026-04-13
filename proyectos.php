@@ -136,7 +136,11 @@ function renderProyectos() {
 }
 
 function abrirModalProyecto(id = null) {
-    const p = id ? proyectos.find(x => x.id == id) : { id:null, codigo:'', nombre:'', activo:1 };
+    let p = { codigo: '', nombre: '', activo: 1, logo_path: null };
+    if (id) {
+        p = window.proyectosCache.find(x => x.id == id) || p;
+    }
+    const logoUrl = resolveMediaUrl(p.logo_path);
     
     Swal.fire({
         title: id ? 'Editar Proyecto' : 'Nuevo Proyecto',
@@ -153,6 +157,14 @@ function abrirModalProyecto(id = null) {
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre Completo del Proyecto</label>
                     <input id="sw_nombre" value="${p.nombre}" placeholder="Ej: Construcción de Edificio Norte" 
                            class="w-full h-12 border border-slate-200 rounded-2xl px-5 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 text-sm font-bold transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Logo del Proyecto (Opcional)</label>
+                    <div class="flex items-center gap-4">
+                        ${logoUrl ? `<img src="${logoUrl}" class="w-12 h-12 rounded-lg object-cover border">` : ''}
+                        <input type="file" id="sw_logo" accept="image/*" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+                    </div>
+                    ${logoUrl ? `<label class="flex items-center gap-2 mt-2 cursor-pointer text-xs text-red-500"><input type="checkbox" id="sw_remove_logo" value="1"> Eliminar logo actual</label>` : ''}
                 </div>
                 <div class="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors" onclick="document.getElementById('sw_activo').click()">
                     <input type="checkbox" id="sw_activo" ${p.activo==1 ? 'checked' : ''} class="w-5 h-5 text-sky-500 rounded-lg border-slate-300 focus:ring-sky-500">
@@ -175,10 +187,12 @@ function abrirModalProyecto(id = null) {
                  id: id,
                  codigo: document.getElementById('sw_codigo').value.trim(),
                  nombre: document.getElementById('sw_nombre').value.trim(),
-                 activo: document.getElementById('sw_activo').checked ? 1 : 0
+                 activo: document.getElementById('sw_activo').checked ? 1 : 0,
+                 logo: document.getElementById('sw_logo').files[0],
+                 remove_logo: document.getElementById('sw_remove_logo') ? (document.getElementById('sw_remove_logo').checked ? 1 : 0) : 0
              };
              if (!data.codigo || !data.nombre) {
-                 Swal.showValidationMessage('Por favor completa todos los campos');
+                 Swal.showValidationMessage('Por favor completa todos los campos obligatorios');
                  return false;
              }
              return data;
@@ -190,10 +204,19 @@ function abrirModalProyecto(id = null) {
 
 async function guardarProyecto(data) {
     try {
+        const formData = new FormData();
+        for (const key in data) {
+            if (data[key] !== null && data[key] !== undefined) {
+                formData.append(key, data[key]);
+            }
+        }
+        if (data.id) {
+            formData.append('_method', 'PUT');
+        }
+
         const res = await fetch('<?= BASE_URL ?>/api/proyectos.php', {
-            method: data.id ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            method: 'POST',
+            body: formData
         });
         const json = await res.json();
         

@@ -44,6 +44,7 @@ $activeNav = 'comprobantes';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="h-full font-sans flex">
@@ -158,6 +159,7 @@ $activeNav = 'comprobantes';
     </main>
 
     <script>
+        const canDelete = <?= json_encode(Auth::canAccess('comprobantes', 'd') || $user['rol'] === 'admin') ?>;
         let currentPage = 1;
         const recordsLimit = 50;
 
@@ -214,10 +216,17 @@ $activeNav = 'comprobantes';
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider ${estadoBadge(r.estado)}">${r.estado}</span>
                 </td>
                 <td class="px-4 py-3 text-center">
-                    <a href="<?= BASE_URL ?>/asiento.php?id=${r.id}" 
-                       class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm border border-transparent hover:border-blue-100" title="Ver / Editar">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    </a>
+                    <div class="flex items-center justify-center gap-1">
+                        <a href="<?= BASE_URL ?>/asiento.php?id=${r.id}" 
+                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm border border-transparent hover:border-blue-100" title="Ver / Editar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </a>
+                        ${canDelete ? `
+                        <button onclick="borrarComprobante(${r.id}, '${r.tipo_comp}-${String(r.numero).padStart(5, '0')}')" 
+                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all shadow-sm border border-transparent hover:border-red-100" title="Eliminar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>` : ''}
+                    </div>
                 </td>
             </tr>
         `}).join('');
@@ -259,6 +268,34 @@ $activeNav = 'comprobantes';
                 anulado: 'bg-red-50 text-red-700 border border-red-100'
             };
             return m[estado] || 'bg-slate-50 text-slate-600 border border-slate-100';
+        }
+
+        async function borrarComprobante(id, numComp) {
+            const result = await Swal.fire({
+                title: '¿Confirmar eliminación?',
+                text: \`Se eliminará el comprobante \${numComp} y todos sus asientos. Esta acción no se puede deshacer.\`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(\`<?= BASE_URL ?>/api/comprobantes.php?id=\${id}\`, { method: 'DELETE' });
+                    const json = await res.json();
+                    if (json.success) {
+                        Swal.fire({icon: 'success', title: 'Eliminado', text: 'El comprobante ha sido eliminado.', timer: 1500, showConfirmButton: false});
+                        cargarListado(currentPage);
+                    } else {
+                        throw new Error(json.error || 'No se pudo eliminar el comprobante');
+                    }
+                } catch (e) {
+                    Swal.fire({icon: 'error', title: 'Error', text: e.message});
+                }
+            }
         }
     </script>
 </body>

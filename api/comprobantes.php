@@ -218,6 +218,38 @@ try {
             ]);
         }
     }
+    elseif ($method === 'DELETE') {
+        if (!Auth::canAccess('comprobantes', 'd') && Auth::user()['rol'] !== 'admin') {
+            throw new Exception("No tienes permiso para eliminar comprobantes.");
+        }
+        $id = (int)($_GET['id'] ?? 0);
+        if (!$id) throw new Exception("ID de comprobante no especificado.");
+        
+        $db->beginTransaction();
+        
+        // Deshacer saldos de cuenta
+        $stmtL = $db->prepare("SELECT cuenta_id, debito, credito FROM asientos WHERE comprobante_id = :cid");
+        $stmtL->execute([':cid' => $id]);
+        $lineas = $stmtL->fetchAll(PDO::FETCH_ASSOC);
+
+        // Periodo
+        $periodoStmt = $db->prepare("SELECT periodo_id, empresa_id FROM comprobantes WHERE id = :id");
+        $periodoStmt->execute([':id' => $id]);
+        $compData = $periodoStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($compData) {
+            foreach ($lineas as $l) {
+                actualizarSaldoCuenta($db, (int)$compData['empresa_id'], (int)$compData['periodo_id'], (int)$l['cuenta_id'], -(float)$l['debito'], -(float)$l['credito']);
+            }
+            
+            // Eliminar asientos y comprobante
+            $db->prepare("DELETE FROM asientos WHERE comprobante_id = :cid")->execute([':cid' => $id]);
+            $db->prepare("DELETE FROM comprobantes WHERE id = :id")->execute([':id' => $id]);
+        }
+        
+        $db->commit();
+        echo json_encode(['success' => true]);
+    }
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();
     http_response_code(500);
