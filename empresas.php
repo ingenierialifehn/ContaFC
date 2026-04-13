@@ -63,15 +63,8 @@ $activeNav = 'empresas';
 let empresasCache = [];
 const isAdmin = <?= $user['rol'] === 'admin' ? 'true' : 'false' ?>;
 const empresaActualId = <?= $empresaActualId ?>;
-const baseUrl = '<?= BASE_URL ?>';
 
 document.addEventListener('DOMContentLoaded', cargarEmpresas);
-
-function resolveMediaUrl(path) {
-    if (!path) return '';
-    if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path;
-    return `${baseUrl}/${String(path).replace(/^\/+/, '')}`;
-}
 
 async function cargarEmpresas() {
     const grid = document.getElementById('emp-grid');
@@ -88,10 +81,6 @@ async function cargarEmpresas() {
 
     grid.innerHTML = empresasCache.map(e => {
         const isSelected = e.id == empresaActualId;
-        const logoUrl = resolveMediaUrl(e.logo_path);
-        const logoMarkup = logoUrl
-            ? `<img src="${logoUrl}" alt="Logo de ${e.nombre}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 bg-white">`
-            : `<div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase">${e.nombre.charAt(0)}</div>`;
         return `
         <div class="bg-white rounded-2xl border ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200'} shadow-sm p-6 flex flex-col transition hover:shadow-md relative overflow-hidden">
             ${isSelected ? `
@@ -100,7 +89,9 @@ async function cargarEmpresas() {
             </div>` : ''}
             
             <div class="flex items-center gap-4 mb-5">
-                ${logoMarkup}
+                <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase">
+                    ${e.nombre.charAt(0)}
+                </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base leading-tight">${e.nombre}</h3>
                     <p class="text-[11px] text-slate-400 font-mono mt-1">RTN: ${e.nit || '—'}</p>
@@ -153,12 +144,11 @@ async function seleccionarEmpresa(id) {
 }
 
 async function abrirModalEmpresa(id = null) {
-    let e = { id:null, codigo:'', nombre:'', nit:'', direccion:'', telefono:'', ciudad:'', departamento:'', moneda_base:'HNL', activa:1, logo_path:null };
+    let e = { id:null, codigo:'', nombre:'', nit:'', direccion:'', telefono:'', ciudad:'', departamento:'', moneda_base:'HNL', activa:1 };
     
     if (id) {
         e = empresasCache.find(x => x.id == id);
     }
-    const logoUrl = resolveMediaUrl(e.logo_path);
 
     const { value: formValues } = await Swal.fire({
         title: id ? 'Editar Empresa' : 'Nueva Empresa',
@@ -199,14 +189,6 @@ async function abrirModalEmpresa(id = null) {
                         <input id="sw_dep" value="${e.departamento||''}" class="w-full h-10 border rounded-xl px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Logo de la Empresa (Opcional)</label>
-                    <div class="flex items-center gap-4">
-                        ${logoUrl ? \`<img src="\${logoUrl}" class="w-12 h-12 rounded-lg object-cover border">\` : ''}
-                        <input type="file" id="sw_logo" accept="image/*" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    </div>
-                    ${logoUrl ? \`<label class="flex items-center gap-2 mt-2 cursor-pointer text-xs text-red-500"><input type="checkbox" id="sw_remove_logo" value="1"> Eliminar logo actual</label>\` : ''}
-                </div>
                 ${!id ? '<div class="p-3 bg-blue-50 rounded-lg text-[10px] text-blue-700 font-medium">✨ Se inicializará automáticamente con el PUC de Honduras.</div>' : ''}
             </div>`,
         showCancelButton: true,
@@ -223,8 +205,6 @@ async function abrirModalEmpresa(id = null) {
                 direccion: document.getElementById('sw_dir').value,
                 ciudad: document.getElementById('sw_ciu').value,
                 departamento: document.getElementById('sw_dep').value,
-                logo: document.getElementById('sw_logo').files[0],
-                remove_logo: document.getElementById('sw_remove_logo') ? (document.getElementById('sw_remove_logo').checked ? 1 : 0) : 0,
                 moneda_base: 'HNL',
                 activa: 1
             };
@@ -235,18 +215,10 @@ async function abrirModalEmpresa(id = null) {
 }
 
 async function guardarEmpresa(data) {
-    const formData = new FormData();
-    for (const key in data) {
-        if (data[key] !== null && data[key] !== undefined) {
-            formData.append(key, data[key]);
-        }
-    }
-    if (data.id) {
-        formData.append('_method', 'PUT');
-    }
     const res = await fetch('<?= BASE_URL ?>/api/empresas.php', {
-        method: 'POST',
-        body: formData
+        method: data.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
     });
     const json = await res.json();
     if (res.ok) {

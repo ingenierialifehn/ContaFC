@@ -6,7 +6,6 @@ use ContaFC\Core\Auth;
 use ContaFC\Core\Database;
 
 Auth::requireAuth();
-Auth::requirePermiso('asiento');
 
 header('Content-Type: application/json');
 
@@ -18,6 +17,7 @@ $asientosTieneFecha = tableHasColumn($db, 'asientos', 'fecha');
 
 try {
     if ($method === 'POST') {
+        Auth::requirePermiso('asiento', 'c');
         $body = json_decode(file_get_contents('php://input'), true);
         if (!$body || empty($body['lineas'])) throw new Exception("Datos incompletos.");
 
@@ -82,7 +82,6 @@ try {
                 ':fec' => $l['fecha'] ?? $body['fecha']
             ]);
             
-            // 3. Afectar Cuentas por Cobrar/Pagar si aplica (Opcional en esta fase, pero planeado)
             // 4. Actualizar Saldos de Cuenta (Optimización para reportes)
             actualizarSaldoCuenta($db, $eid, $pid, (int)$l['cuenta_id'], (float)$l['debito'], (float)$l['credito']);
         }
@@ -91,6 +90,7 @@ try {
         echo json_encode(['success' => true, 'comprobante_id' => $compId, 'numero' => $numero]);
     } 
     elseif ($method === 'GET') {
+        Auth::requirePermiso('comprobantes', 'r');
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
         if ($id) {
             $fechaOperativaSql = $asientosTieneFecha
@@ -135,14 +135,14 @@ try {
                           AND $whereEstado";
             $whereFecha = $asientosTieneFecha
                 ? "AND (
-                        c.fecha BETWEEN :d AND :h
-                        OR EXISTS (
-                            SELECT 1
-                            FROM asientos a
-                            WHERE a.comprobante_id = c.id
-                              AND a.fecha BETWEEN :d2 AND :h2
-                        )
-                    )"
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     )"
                 : "AND c.fecha BETWEEN :d AND :h";
             $where = "$whereBase
                       $whereFecha";
@@ -159,9 +159,6 @@ try {
             $stmtCount->execute();
             $totalRecords = (int)$stmtCount->fetchColumn();
 
-            // Si la fecha no encuentra nada, devolvemos todos los comprobantes
-            // disponibles para no perder registros históricos migrados con fechas
-            // de cabecera inconsistentes.
             if ($totalRecords === 0) {
                 $stmtCountAll = $db->prepare("SELECT COUNT(*) FROM comprobantes c $whereBase");
                 $stmtCountAll->bindValue(':eid', $eid, PDO::PARAM_INT);
@@ -176,20 +173,19 @@ try {
                 }
             }
 
-            // Exponemos la fecha de cabecera también como fecha_asiento para no romper el frontend.
             $fechaAsientoSql = $asientosTieneFecha
                 ? "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_asiento,"
                 : "c.fecha AS fecha_asiento,";
             $sql = "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.razon_social as tercero,
-                           {$fechaAsientoSql}
-                           u.username as usuario_modifico
-                    FROM comprobantes c
-                    JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
-                    LEFT JOIN terceros t ON c.tercero_id = t.id
-                    LEFT JOIN usuarios u ON c.usuario_id = u.id
-                    $where
-                    ORDER BY fecha_asiento DESC, c.id DESC
-                    LIMIT :limit OFFSET :offset";
+                            {$fechaAsientoSql}
+                            u.username as usuario_modifico
+                     FROM comprobantes c
+                     JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
+                     LEFT JOIN terceros t ON c.tercero_id = t.id
+                     LEFT JOIN usuarios u ON c.usuario_id = u.id
+                     $where
+                     ORDER BY fecha_asiento DESC, c.id DESC
+                     LIMIT :limit OFFSET :offset";
             
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':eid', $eid, PDO::PARAM_INT);
@@ -219,34 +215,27 @@ try {
         }
     }
     elseif ($method === 'DELETE') {
-        if (!Auth::canAccess('comprobantes', 'd') && Auth::user()['rol'] !== 'admin') {
-            throw new Exception("No tienes permiso para eliminar comprobantes.");
-        }
-        $id = (int)($_GET['id'] ?? 0);
-        if (!$id) throw new Exception("ID de comprobante no especificado.");
-        
+        Auth::requirePermiso('comprobantes', 'd');
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        if (!$id) throw new Exception("ID de comprobante no proporcionado.");
+
         $db->beginTransaction();
-        
-        // Deshacer saldos de cuenta
-        $stmtL = $db->prepare("SELECT cuenta_id, debito, credito FROM asientos WHERE comprobante_id = :cid");
-        $stmtL->execute([':cid' => $id]);
-        $lineas = $stmtL->fetchAll(PDO::FETCH_ASSOC);
 
-        // Periodo
-        $periodoStmt = $db->prepare("SELECT periodo_id, empresa_id FROM comprobantes WHERE id = :id");
-        $periodoStmt->execute([':id' => $id]);
-        $compData = $periodoStmt->fetch(PDO::FETCH_ASSOC);
+        $stmtLines = $db->prepare("SELECT cuenta_id, debito, credito, periodo_id FROM asientos a JOIN comprobantes c ON a.comprobante_id = c.id WHERE c.id = :id AND c.empresa_id = :eid");
+        $stmtLines->execute([':id' => $id, ':eid' => $eid]);
+        $lineas = $stmtLines->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($compData) {
-            foreach ($lineas as $l) {
-                actualizarSaldoCuenta($db, (int)$compData['empresa_id'], (int)$compData['periodo_id'], (int)$l['cuenta_id'], -(float)$l['debito'], -(float)$l['credito']);
-            }
-            
-            // Eliminar asientos y comprobante
-            $db->prepare("DELETE FROM asientos WHERE comprobante_id = :cid")->execute([':cid' => $id]);
-            $db->prepare("DELETE FROM comprobantes WHERE id = :id")->execute([':id' => $id]);
+        foreach ($lineas as $l) {
+            actualizarSaldoCuenta($db, $eid, (int)$l['periodo_id'], (int)$l['cuenta_id'], -(float)$l['debito'], -(float)$l['credito']);
         }
-        
+
+        $stmtDel = $db->prepare("DELETE FROM comprobantes WHERE id = :id AND empresa_id = :eid");
+        $stmtDel->execute([':id' => $id, ':eid' => $eid]);
+
+        if ($stmtDel->rowCount() === 0) {
+            throw new Exception("El comprobante no existía o no pertenece a esta empresa.");
+        }
+
         $db->commit();
         echo json_encode(['success' => true]);
     }

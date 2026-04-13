@@ -1,1 +1,0 @@
-<?php require "bootstrap.php"; use ContaFC\Core\Database; $db = Database::getInstance()->getPdo(); $r = $db->query("DESCRIBE empresas")->fetchAll(PDO::FETCH_ASSOC); print_r($r); $r2 = $db->query("DESCRIBE proyectos")->fetchAll(PDO::FETCH_ASSOC); print_r($r2);

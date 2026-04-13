@@ -260,38 +260,30 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
 
         <div class="header" style="position: relative; margin-bottom: 50px;">
             <div style="position: absolute; left: 0; top: 0; text-align: left;">
-                <p>Empresa ID: <?= $empresa['id'] ?></p>
-                <p>Destino: Todo el sistema</p>
-                <?php if ($empresa['logo_path']): ?>
-                    <img src="<?= BASE_URL ?>/<?= $empresa['logo_path'] ?>" style="height: 60px; margin-top: 10px; border-radius: 8px;">
-                <?php endif; ?>
+                <p>Empresa: <?= $empresa['id'] ?></p>
+                <p>Destino: Todos</p>
             </div>
 
             <div style="position: absolute; right: 0; top: 0; text-align: right;">
                 <p>Nit: <?= $empresa['nit'] ?? '—' ?></p>
-                <?php if ($tipo === 'INVENTARIOS' && isset($proyecto) && $proyecto && ($proyecto['logo_path'] ?? null)): ?>
-                    <img src="<?= BASE_URL ?>/<?= $proyecto['logo_path'] ?>" style="height: 60px; margin-top: 10px; border-radius: 8px;">
-                <?php endif; ?>
             </div>
 
-            <h1 style="margin-top: 20px; font-size: 28px;"><?= $empresa['nombre'] ?></h1>
+            <h1 style="margin-top: 20px;"><?= $empresa['nombre'] ?></h1>
             <?php if ($projectName !== ""): ?>
-                <p style="font-size: 14px; font-weight: 800; margin: 6px 0 0; color: #1e293b; text-transform: uppercase;">
-                    <span style="color: #64748b;">Proyecto:</span> <?= htmlspecialchars($projectName) ?>
+                <p style="font-size: 12px; font-weight: 700; margin: 6px 0 0; color: #475569;">
+                    Proyecto: <?= htmlspecialchars($projectName) ?>
                 </p>
             <?php endif; ?>
-            <p style="font-size: 18px; letter-spacing: 4px; font-weight: 900; margin: 15px 0; color: #0f172a; border-bottom: 2px solid #0f172a; display: inline-block; padding-bottom: 5px;">
-                <?php 
-                    if ($tipo === 'DIARIO') echo "LIBRO DIARIO";
-                    elseif ($tipo === 'MAYOR') echo "LIBRO MAYOR";
-                    else echo "BALANCE GENERAL";
-                ?>
-            </p>
+            <p style="font-size: 16px; letter-spacing: 2px; font-weight: 800; margin: 10px 0;">BALANCE GENERAL</p>
 
-            <div style="display: flex; justify-content: center; gap: 40px; margin-top: 10px; font-weight: 700;">
+            <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px; font-weight: 700;">
+                <!-- <div style="text-align: center;">
+                    <p style="color: #94a3b8; font-size: 9px; text-transform: uppercase;">Periodo Anterior</p>
+                    <p>31/12/<?= $year - 1 ?></p>
+                </div> -->
                 <div style="text-align: center;">
-                    <p style="color: #94a3b8; font-size: 9px; text-transform: uppercase;">Periodo Reportado</p>
-                    <p style="font-size: 14px;">Al 31/12/<?= $year ?></p>
+                    <p style="color: #94a3b8; font-size: 9px; text-transform: uppercase;">Al</p>
+                    <p>31/12/<?= $year ?></p>
                 </div>
             </div>
         </div>

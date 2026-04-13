@@ -11,7 +11,6 @@ Auth::requireAuth();
 $db  = Database::getInstance()->getPdo();
 $user = Auth::user();
 $method = $_SERVER['REQUEST_METHOD'];
-$isMultipart = str_contains(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data');
 
 try {
     if ($method === 'GET') {
@@ -41,7 +40,7 @@ try {
         }
     } 
     elseif ($method === 'POST') {
-        $body = getRequestData();
+        $body = json_decode(file_get_contents('php://input'), true);
         if (!$body) throw new \RuntimeException('Payload inválido.');
 
         // Acción especial: Seleccionar empresa para la sesión
@@ -59,9 +58,8 @@ try {
         }
 
         Auth::requireRol('admin');
-
-        $requestedMethod = strtoupper((string)($body['_method'] ?? 'POST'));
-        $id      = !empty($body['id']) ? (int)$body['id'] : null;
+        
+        $id      = $body['id'] ? (int)$body['id'] : null;
         $codigo  = trim($body['codigo']);
         $nombre  = trim($body['nombre']);
         $nit     = trim($body['nit'] ?? '');
@@ -71,51 +69,25 @@ try {
         $dep     = trim($body['departamento'] ?? '');
         $moneda  = trim($body['moneda_base'] ?? 'HNL');
         $activa  = (int)($body['activa'] ?? 1);
-        $removeLogo = (int)($body['remove_logo'] ?? 0) === 1;
 
         if (!$codigo || !$nombre) throw new \RuntimeException('Código y Nombre son obligatorios.');
 
-        if ($requestedMethod === 'PUT' || $id) {
-            if (!$id) throw new \RuntimeException('ID faltante.');
-
-            $stmtCurrent = $db->prepare("SELECT logo_path FROM empresas WHERE id = :id");
-            $stmtCurrent->execute([':id' => $id]);
-            $current = $stmtCurrent->fetch();
-            if (!$current) throw new \RuntimeException('Empresa no encontrada.');
-
-            $logoPath = $current['logo_path'] ?? null;
-            if ($removeLogo && $logoPath) {
-                deleteUploadedFile((string)$logoPath);
-                $logoPath = null;
-            }
-            if ($isMultipart && isset($_FILES['logo']) && (int)($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $newLogoPath = storeUploadedLogo($_FILES['logo'], $codigo);
-                if ($logoPath && $logoPath !== $newLogoPath) {
-                    deleteUploadedFile((string)$logoPath);
-                }
-                $logoPath = $newLogoPath;
-            }
-
+        if ($id) {
             $stmt = $db->prepare(
                 "UPDATE empresas SET 
                         codigo = :c, nombre = :n, nit = :nit, direccion = :d, telefono = :t, 
-                        ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a, logo_path = :logo
+                        ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a
                  WHERE id = :id"
             );
-            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':logo'=>$logoPath, ':id'=>$id]);
+            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':id'=>$id]);
         } else {
             $db->beginTransaction();
-
-            $logoPath = null;
-            if ($isMultipart && isset($_FILES['logo']) && (int)($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $logoPath = storeUploadedLogo($_FILES['logo'], $codigo);
-            }
-
+            
             $stmt = $db->prepare(
-                "INSERT INTO empresas (codigo, nombre, nit, direccion, telefono, ciudad, departamento, moneda_base, activa, logo_path)
-                 VALUES (:c, :n, :nit, :d, :t, :ci, :dep, :m, :a, :logo)"
+                "INSERT INTO empresas (codigo, nombre, nit, direccion, telefono, ciudad, departamento, moneda_base, activa)
+                 VALUES (:c, :n, :nit, :d, :t, :ci, :dep, :m, :a)"
             );
-            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':logo'=>$logoPath]);
+            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa]);
             $newId = (int)$db->lastInsertId();
 
             // Vincular al admin actual
@@ -131,7 +103,7 @@ try {
     }
     elseif ($method === 'PUT') {
         Auth::requireRol('admin');
-        $body = getRequestData();
+        $body = json_decode(file_get_contents('php://input'), true);
         $id = (int)($body['id'] ?? 0);
         if (!$id) throw new \RuntimeException('ID faltante.');
         
@@ -160,13 +132,6 @@ try {
         $id = (int)($_GET['id'] ?? 0);
         if ($id <= 0) throw new \RuntimeException('ID inválido.');
         if ($id === 1) throw new \RuntimeException('La empresa principal no se puede eliminar.');
-
-        $stmtLogo = $db->prepare("SELECT logo_path FROM empresas WHERE id = :id");
-        $stmtLogo->execute([':id' => $id]);
-        $logoPath = $stmtLogo->fetchColumn();
-        if ($logoPath) {
-            deleteUploadedFile((string)$logoPath);
-        }
 
         $db->prepare("DELETE FROM empresas WHERE id = :id")->execute([':id' => $id]);
         echo json_encode(['success' => true]);
@@ -213,65 +178,5 @@ function inicializarPUCHonduras($db, $eid) {
 
     foreach ($puc as $row) {
         $stmt->execute([$eid, $row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6]]);
-    }
-}
-
-function getRequestData(): array {
-    if (!empty($_POST)) {
-        return $_POST;
-    }
-
-    $body = json_decode(file_get_contents('php://input'), true);
-    return is_array($body) ? $body : [];
-}
-
-function storeUploadedLogo(array $file, string $empresaCodigo): string {
-    $error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($error !== UPLOAD_ERR_OK) {
-        throw new \RuntimeException('No se pudo cargar la imagen de la empresa.');
-    }
-
-    $tmpName = $file['tmp_name'] ?? '';
-    if (!is_uploaded_file($tmpName)) {
-        throw new \RuntimeException('Archivo de imagen invÃ¡lido.');
-    }
-
-    $mime = mime_content_type($tmpName) ?: '';
-    $allowed = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/webp' => 'webp',
-        'image/gif' => 'gif',
-    ];
-    if (!isset($allowed[$mime])) {
-        throw new \RuntimeException('Formato de imagen no permitido. Use JPG, PNG, WEBP o GIF.');
-    }
-
-    $uploadDir = __DIR__ . '/../uploads/empresas';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
-        throw new \RuntimeException('No se pudo crear la carpeta de logos.');
-    }
-
-    $safeCode = preg_replace('/[^A-Za-z0-9_-]/', '_', $empresaCodigo) ?: 'empresa';
-    $filename = $safeCode . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    $target = $uploadDir . '/' . $filename;
-
-    if (!move_uploaded_file($tmpName, $target)) {
-        throw new \RuntimeException('No se pudo guardar la imagen de la empresa.');
-    }
-
-    return 'uploads/empresas/' . $filename;
-}
-
-function deleteUploadedFile(string $relativePath): void {
-    $normalized = ltrim(str_replace(['\\', '..'], ['/', ''], $relativePath), '/');
-    $root = realpath(__DIR__ . '/../');
-    if ($root === false) {
-        return;
-    }
-
-    $fullPath = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $normalized);
-    if (is_file($fullPath)) {
-        @unlink($fullPath);
     }
 }

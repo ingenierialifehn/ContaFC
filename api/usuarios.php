@@ -35,14 +35,6 @@ try {
             );
             $stmtEmp->execute([':uid' => $u['id']]);
             $u['empresas'] = $stmtEmp->fetchAll();
-
-            $stmtProj = $db->prepare(
-                "SELECT p.id, p.nombre FROM proyectos p
-                 INNER JOIN usuarios_proyectos up ON up.proyecto_id = p.id
-                 WHERE up.usuario_id = :uid"
-            );
-            $stmtProj->execute([':uid' => $u['id']]);
-            $u['proyectos'] = $stmtProj->fetchAll();
         }
         unset($u);
 
@@ -62,7 +54,6 @@ try {
         $password    = $body['password'] ?? '';
         $permisos    = json_encode($body['permisos'] ?? [], JSON_UNESCAPED_UNICODE);
         $empresa_ids = $body['empresa_ids'] ?? [];
-        $proyecto_ids = $body['proyecto_ids'] ?? [];
 
         if (!$username || !$nombre) {
             throw new \RuntimeException('Usuario y Nombre son obligatorios.');
@@ -99,12 +90,6 @@ try {
             $stmtIns->execute([$newId, (int)$eid]);
         }
 
-        // Sincronizar proyectos
-        $stmtInsP = $db->prepare("INSERT INTO usuarios_proyectos (usuario_id, proyecto_id) VALUES (?, ?)");
-        foreach ($proyecto_ids as $pid) {
-            $stmtInsP->execute([$newId, (int)$pid]);
-        }
-
         $db->commit();
         echo json_encode(['success' => true, 'id' => $newId, 'message' => 'Usuario creado correctamente.']);
         exit;
@@ -119,7 +104,6 @@ try {
         $rol         = $body['rol'] ?? 'consulta';
         $permisos    = json_encode($body['permisos'] ?? [], JSON_UNESCAPED_UNICODE);
         $empresa_ids = $body['empresa_ids'] ?? [];
-        $proyecto_ids = $body['proyecto_ids'] ?? [];
         $newPass     = $body['password'] ?? '';
 
         if (!$id) throw new \RuntimeException('ID requerido para actualizar.');
@@ -142,13 +126,6 @@ try {
         $stmtIns = $db->prepare("INSERT INTO usuarios_empresas (usuario_id, empresa_id) VALUES (?, ?)");
         foreach ($empresa_ids as $eid) {
             $stmtIns->execute([$id, (int)$eid]);
-        }
-
-        // Sincronizar proyectos
-        $db->prepare("DELETE FROM usuarios_proyectos WHERE usuario_id = ?")->execute([$id]);
-        $stmtInsP = $db->prepare("INSERT INTO usuarios_proyectos (usuario_id, proyecto_id) VALUES (?, ?)");
-        foreach ($proyecto_ids as $pid) {
-            $stmtInsP->execute([$id, (int)$pid]);
         }
 
         $db->commit();

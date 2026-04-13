@@ -9,10 +9,7 @@ Auth::requireAuth();
 Auth::requireRol('admin');
 
 $db = Database::getInstance()->getPdo();
-$db->exec("CREATE TABLE IF NOT EXISTS usuarios_proyectos (usuario_id INT NOT NULL, proyecto_id INT NOT NULL, PRIMARY KEY(usuario_id, proyecto_id))");
-
 $empresasDisponibles = $db->query("SELECT id, nombre FROM empresas ORDER BY nombre")->fetchAll();
-$proyectosDisponibles = $db->query("SELECT id, nombre, empresa_id, codigo FROM proyectos WHERE activo = 1 ORDER BY nombre")->fetchAll();
 
 $pageTitle = 'Control de Usuarios (RBAC)';
 $activeNav = 'usuarios';
@@ -121,7 +118,6 @@ try {
 
 <script>
 const EMPRESAS = <?= json_encode($empresasDisponibles) ?>;
-const PROYECTOS = <?= json_encode($proyectosDisponibles) ?>;
 const MODULOS = [
     { cat: 'General', items: [
         { key: 'dashboard', label: 'Tablero (Dashboard)' },
@@ -233,19 +229,12 @@ function render(data) {
                 </span>
             </td>
             <td class="px-10 py-7 text-center">
-                <div class="flex flex-col items-center gap-1">
-                    <div class="flex justify-center -space-x-3">
-                        ${(u.empresas || []).map(e => `
-                            <div class="w-9 h-9 rounded-xl bg-white border-2 border-slate-50 flex items-center justify-center text-[10px] font-black text-slate-800 shadow-sm ring-4 ring-white" title="${e.nombre}">
-                                ${e.nombre.charAt(0)}
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${u.proyectos && u.proyectos.length > 0 ? `
-                        <div class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 mt-1">
-                            ${u.proyectos.length} Proyectos
+                <div class="flex justify-center -space-x-3">
+                    ${(u.empresas || []).map(e => `
+                        <div class="w-9 h-9 rounded-xl bg-white border-2 border-slate-50 flex items-center justify-center text-[10px] font-black text-slate-800 shadow-sm ring-4 ring-white" title="${e.nombre}">
+                            ${e.nombre.charAt(0)}
                         </div>
-                    ` : ''}
+                    `).join('')}
                 </div>
             </td>
             <td class="px-10 py-7 text-center">
@@ -277,7 +266,7 @@ async function toggle(id, current) {
 }
 
 function abrirModalUsuario(id = null) {
-    const u = id ? usuarios.find(x => x.id == id) : { id:null, username:'', nombre:'', email:'', rol:'consulta', empresas:[], proyectos:[], permisos:{} };
+    const u = id ? usuarios.find(x => x.id == id) : { id:null, username:'', nombre:'', email:'', rol:'consulta', empresas:[], permisos:{} };
     
     // Asegurarnos que permisos sea un objeto
     if (typeof u.permisos !== 'object' || u.permisos === null) {
@@ -330,28 +319,12 @@ function abrirModalUsuario(id = null) {
 
                 <!-- Empresas -->
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                    <div class="text-[10px] font-black text-honduras uppercase tracking-[0.2em] mb-4">Acceso a Entidades (Empresas)</div>
+                    <div class="text-[10px] font-black text-honduras uppercase tracking-[0.2em] mb-4">Acceso a Entidades</div>
                     <div class="grid grid-cols-2 gap-2">
                         ${EMPRESAS.map(e => `
                         <label class="flex items-center gap-3 p-3.5 bg-slate-50/50 border border-transparent rounded-2xl cursor-pointer hover:border-honduras/20 transition-all group">
-                            <input type="checkbox" name="eid" value="${e.id}" ${u.empresas.some(x => x.id == e.id) ? 'checked' : ''} class="w-5 h-5 text-honduras rounded-lg border-2 border-slate-200" onchange="actualizarProyectosModal(this, ${e.id})">
+                            <input type="checkbox" name="eid" value="${e.id}" ${u.empresas.some(x => x.id == e.id) ? 'checked' : ''} class="w-5 h-5 text-honduras rounded-lg border-2 border-slate-200">
                             <span class="text-[11px] font-black text-slate-600 group-hover:text-slate-900">${e.nombre}</span>
-                        </label>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- Proyectos -->
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                    <div class="text-[10px] font-black text-honduras uppercase tracking-[0.2em] mb-4">Acceso a Proyectos Específicos</div>
-                    <div class="grid grid-cols-2 gap-2" id="proyectos-container">
-                        ${PROYECTOS.map(p => `
-                        <label class="flex items-center gap-3 p-3.5 bg-slate-50/50 border border-transparent rounded-2xl cursor-pointer hover:border-honduras/20 transition-all group proyecto-item" data-empresa="${p.empresa_id}">
-                            <input type="checkbox" name="pid" value="${p.id}" ${(u.proyectos || []).some(x => x.id == p.id) ? 'checked' : ''} class="w-5 h-5 text-emerald-500 rounded-lg border-2 border-slate-200">
-                            <div class="flex flex-col">
-                                <span class="text-[11px] font-black text-slate-600 group-hover:text-slate-900">${p.nombre}</span>
-                                <span class="text-[9px] text-slate-400 font-mono">${p.codigo}</span>
-                            </div>
                         </label>
                         `).join('')}
                     </div>
@@ -451,7 +424,6 @@ function abrirModalUsuario(id = null) {
                 rol: document.getElementById('sw_r').value,
                 password: document.getElementById('sw_p').value,
                 empresa_ids: Array.from(document.querySelectorAll('input[name="eid"]:checked')).map(x => x.value),
-                proyecto_ids: Array.from(document.querySelectorAll('input[name="pid"]:checked')).map(x => x.value),
                 permisos: {}
             };
 
@@ -476,28 +448,6 @@ function abrirModalUsuario(id = null) {
         }
     }).then(res => {
         if (res.isConfirmed) save(res.value);
-    });
-    // Trigger filter for projects based on initially selected companies
-    setTimeout(() => {
-        document.querySelectorAll('input[name="eid"]').forEach(cb => {
-            actualizarProyectosModal(cb, cb.value, true);
-        });
-    }, 100);
-}
-
-function actualizarProyectosModal(checkbox, empresaId, initial = false) {
-    const isChecked = checkbox.checked;
-    const items = document.querySelectorAll(\`.proyecto-item[data-empresa="\${empresaId}"]\`);
-    items.forEach(item => {
-        if (isChecked) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-            if (!initial) {
-                const cb = item.querySelector('input[type="checkbox"]');
-                if (cb) cb.checked = false;
-            }
-        }
     });
 }
 
