@@ -46,11 +46,11 @@ final class Auth
 
         // Obtener proyectos asociados
         if ($user['rol'] === 'admin') {
-            $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id FROM proyectos WHERE activo = 1");
+            $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id, logo_path FROM proyectos WHERE activo = 1");
             $stmtP->execute();
         } else {
             $stmtP = $pdo->prepare(
-                "SELECT p.id, p.nombre, p.empresa_id 
+                "SELECT p.id, p.nombre, p.empresa_id, p.logo_path 
                  FROM proyectos p 
                  JOIN usuarios_proyectos up ON p.id = up.proyecto_id 
                  WHERE up.usuario_id = :uid AND p.activo = 1"
@@ -119,11 +119,11 @@ final class Auth
 
             // Hidratar proyectos
             if ($user['rol'] === 'admin') {
-                $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id FROM proyectos WHERE activo = 1 ORDER BY nombre");
+                $stmtP = $pdo->prepare("SELECT id, nombre, empresa_id, logo_path FROM proyectos WHERE activo = 1 ORDER BY nombre");
                 $stmtP->execute();
             } else {
                 $stmtP = $pdo->prepare(
-                    "SELECT p.id, p.nombre, p.empresa_id
+                    "SELECT p.id, p.nombre, p.empresa_id, p.logo_path
                      FROM proyectos p
                      JOIN usuarios_proyectos up ON p.id = up.proyecto_id
                      WHERE up.usuario_id = :uid AND p.activo = 1

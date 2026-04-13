@@ -113,7 +113,10 @@ function renderProyectos() {
             <td class="px-8 py-5">
                 <span class="font-mono font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-100">${p.codigo}</span>
             </td>
-            <td class="px-8 py-5">
+            <td class="px-8 py-5 flex items-center gap-3">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-sm uppercase overflow-hidden shrink-0">
+                    ${p.logo_path ? `<img src="<?= BASE_URL ?>/${p.logo_path}" class="w-full h-full object-contain" />` : p.nombre.charAt(0)}
+                </div>
                 <span class="font-bold text-slate-800 text-base tracking-tight">${p.nombre}</span>
             </td>
             <td class="px-8 py-5 text-center">
@@ -136,7 +139,7 @@ function renderProyectos() {
 }
 
 function abrirModalProyecto(id = null) {
-    const p = id ? proyectos.find(x => x.id == id) : { id:null, codigo:'', nombre:'', activo:1 };
+    const p = id ? proyectos.find(x => x.id == id) : { id:null, codigo:'', nombre:'', activo:1, logo_path:'' };
     
     Swal.fire({
         title: id ? 'Editar Proyecto' : 'Nuevo Proyecto',
@@ -153,6 +156,19 @@ function abrirModalProyecto(id = null) {
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre Completo del Proyecto</label>
                     <input id="sw_nombre" value="${p.nombre}" placeholder="Ej: Construcción de Edificio Norte" 
                            class="w-full h-12 border border-slate-200 rounded-2xl px-5 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 text-sm font-bold transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Logo del Proyecto</label>
+                    <div class="flex items-center gap-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <div id="sw_logo_preview" class="w-16 h-16 bg-white rounded-xl border-dashed border-2 border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                            ${p.logo_path ? `<img src="<?= BASE_URL ?>/${p.logo_path}" class="w-full h-full object-contain" />` : '<span class="text-[10px] text-slate-400">Sin logo</span>'}
+                        </div>
+                        <div class="flex-1">
+                            <input type="file" id="sw_logo_file" accept="image/*" class="hidden" onchange="subirLogo(this)">
+                            <button type="button" onclick="document.getElementById('sw_logo_file').click()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition shadow-sm">Seleccionar Logo</button>
+                            <input type="hidden" id="sw_logo_path" value="${p.logo_path || ''}">
+                        </div>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors" onclick="document.getElementById('sw_activo').click()">
                     <input type="checkbox" id="sw_activo" ${p.activo==1 ? 'checked' : ''} class="w-5 h-5 text-sky-500 rounded-lg border-slate-300 focus:ring-sky-500">
@@ -175,7 +191,8 @@ function abrirModalProyecto(id = null) {
                  id: id,
                  codigo: document.getElementById('sw_codigo').value.trim(),
                  nombre: document.getElementById('sw_nombre').value.trim(),
-                 activo: document.getElementById('sw_activo').checked ? 1 : 0
+                 activo: document.getElementById('sw_activo').checked ? 1 : 0,
+                 logo_path: document.getElementById('sw_logo_path').value
              };
              if (!data.codigo || !data.nombre) {
                  Swal.showValidationMessage('Por favor completa todos los campos');
@@ -186,6 +203,31 @@ function abrirModalProyecto(id = null) {
     }).then(result => {
         if (result.isConfirmed) guardarProyecto(result.value);
     });
+}
+
+async function subirLogo(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const formData = new FormData();
+    formData.append('logo', input.files[0]);
+
+    Swal.showLoading();
+    try {
+        const res = await fetch('<?= BASE_URL ?>/api/upload_logo.php', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.success) {
+            document.getElementById('sw_logo_path').value = json.path;
+            document.getElementById('sw_logo_preview').innerHTML = `<img src="<?= BASE_URL ?>/${json.path}" class="w-full h-full object-contain" />`;
+            Swal.hideLoading();
+        } else {
+            Swal.fire('Error', json.error || 'No se pudo subir el logo', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Error de conexión', 'error');
+    }
 }
 
 async function guardarProyecto(data) {

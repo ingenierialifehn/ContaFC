@@ -89,8 +89,8 @@ async function cargarEmpresas() {
             </div>` : ''}
             
             <div class="flex items-center gap-4 mb-5">
-                <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase">
-                    ${e.nombre.charAt(0)}
+                <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-400 font-bold text-xl uppercase overflow-hidden">
+                    ${e.logo_path ? `<img src="<?= BASE_URL ?>/${e.logo_path}" class="w-full h-full object-contain" />` : e.nombre.charAt(0)}
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base leading-tight">${e.nombre}</h3>
@@ -144,7 +144,7 @@ async function seleccionarEmpresa(id) {
 }
 
 async function abrirModalEmpresa(id = null) {
-    let e = { id:null, codigo:'', nombre:'', nit:'', direccion:'', telefono:'', ciudad:'', departamento:'', moneda_base:'HNL', activa:1 };
+    let e = { id:null, codigo:'', nombre:'', nit:'', direccion:'', telefono:'', ciudad:'', departamento:'', moneda_base:'HNL', activa:1, logo_path:'' };
     
     if (id) {
         e = empresasCache.find(x => x.id == id);
@@ -189,6 +189,22 @@ async function abrirModalEmpresa(id = null) {
                         <input id="sw_dep" value="${e.departamento||''}" class="w-full h-10 border rounded-xl px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                 </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Logo de la Empresa</label>
+                        <div class="flex items-center gap-4">
+                            <div id="sw_logo_preview" class="w-16 h-16 bg-slate-100 rounded-xl border-dashed border-2 border-slate-300 flex items-center justify-center overflow-hidden">
+                                ${e.logo_path ? `<img src="<?= BASE_URL ?>/${e.logo_path}" class="w-full h-full object-contain" />` : '<span class="text-[10px] text-slate-400">Sin logo</span>'}
+                            </div>
+                            <div class="flex-1">
+                                <input type="file" id="sw_logo_file" accept="image/*" class="hidden" onchange="subirLogo(this)">
+                                <button type="button" onclick="document.getElementById('sw_logo_file').click()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">Seleccionar Archivo</button>
+                                <input type="hidden" id="sw_logo_path" value="${e.logo_path || ''}">
+                                <p class="text-[9px] text-slate-400 mt-1">PNG, JPG o WebP. Máximo 2MB.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 ${!id ? '<div class="p-3 bg-blue-50 rounded-lg text-[10px] text-blue-700 font-medium">✨ Se inicializará automáticamente con el PUC de Honduras.</div>' : ''}
             </div>`,
         showCancelButton: true,
@@ -206,12 +222,38 @@ async function abrirModalEmpresa(id = null) {
                 ciudad: document.getElementById('sw_ciu').value,
                 departamento: document.getElementById('sw_dep').value,
                 moneda_base: 'HNL',
-                activa: 1
+                activa: 1,
+                logo_path: document.getElementById('sw_logo_path').value
             };
         }
     });
 
     if (formValues) guardarEmpresa(formValues);
+}
+
+async function subirLogo(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const formData = new FormData();
+    formData.append('logo', input.files[0]);
+
+    Swal.showLoading();
+    try {
+        const res = await fetch('<?= BASE_URL ?>/api/upload_logo.php', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.success) {
+            document.getElementById('sw_logo_path').value = json.path;
+            document.getElementById('sw_logo_preview').innerHTML = `<img src="<?= BASE_URL ?>/${json.path}" class="w-full h-full object-contain" />`;
+            Swal.hideLoading();
+        } else {
+            Swal.fire('Error', json.error || 'No se pudo subir el logo', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Error de conexión', 'error');
+    }
 }
 
 async function guardarEmpresa(data) {

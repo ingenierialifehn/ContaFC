@@ -16,6 +16,10 @@ $stmtC = $db->prepare("SELECT * FROM com_cai WHERE empresa_id = :eid AND activo 
 $stmtC->execute([':eid' => $eid]);
 $caiActivo = $stmtC->fetch();
 
+$stmtE = $db->prepare("SELECT * FROM empresas WHERE id = :eid");
+$stmtE->execute([':eid' => $eid]);
+$empresa = $stmtE->fetch();
+
 $activeNav = 'nueva_factura'; 
 ?>
 <!DOCTYPE html>
@@ -54,8 +58,12 @@ $activeNav = 'nueva_factura';
     <!-- Header SAR Compliant -->
     <header class="px-10 py-8 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
         <div class="flex items-center gap-6">
-            <div class="w-16 h-16 bg-honduras text-white rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/30">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <div class="w-16 h-16 bg-white text-honduras rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/30 overflow-hidden">
+                <?php if (!empty($empresa['logo_path'])): ?>
+                    <img src="<?= BASE_URL ?>/<?= $empresa['logo_path'] ?>" class="w-full h-full object-contain">
+                <?php else: ?>
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <?php endif; ?>
             </div>
             <div>
                 <h1 class="text-2xl font-black text-slate-800 tracking-tight italic">Factura de <span class="text-honduras">Venta</span></h1>

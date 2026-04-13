@@ -117,6 +117,7 @@ require __DIR__ . '/partials/sidebar.php';
 <script>
 const TIPO_REP = '<?= $tipoReporte ?>';
 const EMPRESA_NOMBRE = '<?= addslashes($empresa['nombre'] ?? '') ?>';
+const EMPRESA_LOGO = '<?= !empty($empresa['logo_path']) ? BASE_URL . '/' . $empresa['logo_path'] : '' ?>';
 
 async function generarReporte() {
     const desde = document.getElementById('f-desde').value;
@@ -167,7 +168,8 @@ function renderBalanceComprobacion(data, cont, desde, hasta) {
     }).join('');
 
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100 text-center">
+        <div class="p-5 border-b border-slate-100 text-center flex flex-col items-center gap-2">
+            ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" class="max-h-16 mb-2">` : ''}
             <div class="text-lg font-bold text-slate-800 uppercase tracking-tight">${EMPRESA_NOMBRE}</div>
             <div class="text-md font-bold text-slate-700">Balance de Comprobación</div>
             <div class="text-sm text-slate-500 italic">Del ${desde} al ${hasta}</div>
@@ -220,7 +222,8 @@ function renderBalanceGeneral(data, cont, corte) {
         </div>`;
 
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100 text-center">
+        <div class="p-5 border-b border-slate-100 text-center flex flex-col items-center gap-2">
+            ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" class="max-h-16 mb-2">` : ''}
             <div class="text-lg font-bold text-slate-800 uppercase tracking-tight">${EMPRESA_NOMBRE}</div>
             <div class="text-md font-bold text-slate-700">Balance General</div>
             <div class="text-sm text-slate-500 italic">Al ${corte}</div>
@@ -248,7 +251,8 @@ function renderEstadoResultados(data, cont, desde, hasta) {
     const utilidad = totIng - totGas;
 
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100 text-center text-slate-800">
+        <div class="p-5 border-b border-slate-100 text-center text-slate-800 flex flex-col items-center gap-2">
+            ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" class="max-h-16 mb-2">` : ''}
             <div class="text-lg font-bold uppercase">${EMPRESA_NOMBRE}</div>
             <div class="text-md font-bold">Estado de Resultados</div>
             <div class="text-sm text-slate-500 italic">${desde} – ${hasta}</div>
@@ -274,7 +278,8 @@ function renderEstadoResultados(data, cont, desde, hasta) {
 function renderAuxiliar(data, cont, cuenta, desde, hasta) {
     if (!data.length) { cont.innerHTML = '<div class="p-10 text-center text-slate-400 italic">No existen registros para esta cuenta.</div>'; return; }
     cont.innerHTML = `
-        <div class="p-5 border-b border-slate-100 text-center">
+        <div class="p-5 border-b border-slate-100 text-center flex flex-col items-center gap-2">
+            ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" class="max-h-16 mb-2">` : ''}
             <div class="text-lg font-bold uppercase">${EMPRESA_NOMBRE}</div>
             <div class="text-md font-bold uppercase">Auxiliar de Cuenta: ${cuenta}</div>
             <div class="text-sm text-slate-500 italic">${desde} – ${hasta}</div>
@@ -328,7 +333,8 @@ function renderISVReport(data, cont, desde, hasta) {
     }).join('');
 
     cont.innerHTML = `
-        <div class="p-8 border-b border-slate-100 bg-slate-50/50 text-center">
+        <div class="p-8 border-b border-slate-100 bg-slate-50/50 text-center flex flex-col items-center gap-2">
+            ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" class="max-h-16 mb-2">` : ''}
             <div class="text-lg font-bold">${EMPRESA_NOMBRE}</div>
             <h2 class="text-2xl font-black text-slate-800 tracking-tighter">Liquidación Informativa de ISV</h2>
             <p class="text-sm text-slate-500 font-medium mt-1 uppercase tracking-widest">${desde} a ${hasta}</p>

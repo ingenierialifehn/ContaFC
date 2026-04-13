@@ -38,27 +38,29 @@ try {
         }
 
         $stmt = $db->prepare(
-            "INSERT INTO proyectos (empresa_id, codigo, nombre, activo) 
-             VALUES (:eid, :cod, :nom, :act)"
+            "INSERT INTO proyectos (empresa_id, codigo, nombre, activo, logo_path) 
+             VALUES (:eid, :cod, :nom, :act, :logo)"
         );
         $stmt->execute([
             ':eid' => $eid,
             ':cod' => trim($data['codigo']),
             ':nom' => trim($data['nombre']),
-            ':act' => (int)($data['activo'] ?? 1)
+            ':act' => (int)($data['activo'] ?? 1),
+            ':logo' => trim($data['logo_path'] ?? '')
         ]);
         echo json_encode(['success' => true]);
     }
     elseif ($method === 'PUT') {
         $data = json_decode(file_get_contents('php://input'), true);
         $stmt = $db->prepare(
-            "UPDATE proyectos SET codigo = :cod, nombre = :nom, activo = :act 
+            "UPDATE proyectos SET codigo = :cod, nombre = :nom, activo = :act, logo_path = :logo
              WHERE id = :id AND empresa_id = :eid"
         );
         $stmt->execute([
             ':cod' => trim($data['codigo']),
             ':nom' => trim($data['nombre']),
             ':act' => (int)($data['activo'] ?? 1),
+            ':logo' => trim($data['logo_path'] ?? ''),
             ':id'  => (int)$data['id'],
             ':eid' => $eid
         ]);

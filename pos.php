@@ -11,6 +11,10 @@ Auth::requirePermiso('comercial');
 $db = Database::getInstance()->getPdo();
 $eid = Auth::empresaId();
 
+$stmtE = $db->prepare("SELECT * FROM empresas WHERE id = :eid");
+$stmtE->execute([':eid' => $eid]);
+$empresa = $stmtE->fetch();
+
 $activeNav = 'pos'; 
 ?>
 <!DOCTYPE html>
@@ -111,6 +115,11 @@ $activeNav = 'pos';
 
 <!-- ─── Panel de Pago (Derecho) ──────────────────────────────────────────────── -->
 <aside class="w-[400px] bg-slate-900 border-l border-pos_border flex flex-col p-8">
+    <?php if (!empty($empresa['logo_path'])): ?>
+        <div class="flex justify-center mb-6">
+            <img src="<?= BASE_URL ?>/<?= $empresa['logo_path'] ?>" class="max-h-12 opacity-80 hover:opacity-100 transition-opacity">
+        </div>
+    <?php endif; ?>
     <div class="flex-1 space-y-6">
         <!-- Totales Grandes -->
         <div class="bg-slate-950 p-8 rounded-[2.5rem] border border-pos_border shadow-inner">

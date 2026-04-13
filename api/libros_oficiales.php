@@ -56,9 +56,11 @@ if ($tipo === 'DIARIO') {
     $data = $service->getComparativeBalance($eid, $year, $proyecto_id);
 
     if ($proyecto_id) {
-        $stmtP = Database::getInstance()->getPdo()->prepare("SELECT nombre FROM proyectos WHERE id = ?");
+        $stmtP = Database::getInstance()->getPdo()->prepare("SELECT nombre, logo_path FROM proyectos WHERE id = ?");
         $stmtP->execute([$proyecto_id]);
-        $projectName = $stmtP->fetchColumn();
+        $proyRow = $stmtP->fetch();
+        $projectName = $proyRow['nombre'] ?? '';
+        $projectLogo = $proyRow['logo_path'] ?? null;
     }
 } else {
     die("Tipo de libro no soportado aún.");
@@ -268,7 +270,15 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                 <p>Nit: <?= $empresa['nit'] ?? '—' ?></p>
             </div>
 
-            <h1 style="margin-top: 20px;"><?= $empresa['nombre'] ?></h1>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 20px;">
+                <?php 
+                    $activeLogo = ($projectName !== "" && !empty($projectLogo)) ? $projectLogo : ($empresa['logo_path'] ?? null);
+                    if ($activeLogo): 
+                ?>
+                    <img src="<?= BASE_URL ?>/<?= $activeLogo ?>" style="max-height: 80px; max-width: 200px; object-contain: contain;">
+                <?php endif; ?>
+                <h1 style="margin: 0;"><?= $empresa['nombre'] ?></h1>
+            </div>
             <?php if ($projectName !== ""): ?>
                 <p style="font-size: 12px; font-weight: 700; margin: 6px 0 0; color: #475569;">
                     Proyecto: <?= htmlspecialchars($projectName) ?>

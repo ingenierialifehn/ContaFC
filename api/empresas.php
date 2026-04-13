@@ -69,6 +69,7 @@ try {
         $dep     = trim($body['departamento'] ?? '');
         $moneda  = trim($body['moneda_base'] ?? 'HNL');
         $activa  = (int)($body['activa'] ?? 1);
+        $logo    = trim($body['logo_path'] ?? '');
 
         if (!$codigo || !$nombre) throw new \RuntimeException('Código y Nombre son obligatorios.');
 
@@ -76,18 +77,18 @@ try {
             $stmt = $db->prepare(
                 "UPDATE empresas SET 
                         codigo = :c, nombre = :n, nit = :nit, direccion = :d, telefono = :t, 
-                        ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a
+                        ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a, logo_path = :logo
                  WHERE id = :id"
             );
-            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':id'=>$id]);
+            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':logo'=>$logo, ':id'=>$id]);
         } else {
             $db->beginTransaction();
             
             $stmt = $db->prepare(
-                "INSERT INTO empresas (codigo, nombre, nit, direccion, telefono, ciudad, departamento, moneda_base, activa)
-                 VALUES (:c, :n, :nit, :d, :t, :ci, :dep, :m, :a)"
+                "INSERT INTO empresas (codigo, nombre, nit, direccion, telefono, ciudad, departamento, moneda_base, activa, logo_path)
+                 VALUES (:c, :n, :nit, :d, :t, :ci, :dep, :m, :a, :logo)"
             );
-            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa]);
+            $stmt->execute([':c'=>$codigo, ':n'=>$nombre, ':nit'=>$nit, ':d'=>$dir, ':t'=>$tel, ':ci'=>$ciu, ':dep'=>$dep, ':m'=>$moneda, ':a'=>$activa, ':logo'=>$logo]);
             $newId = (int)$db->lastInsertId();
 
             // Vincular al admin actual
@@ -110,7 +111,7 @@ try {
         $stmt = $db->prepare(
             "UPDATE empresas SET 
                     codigo = :c, nombre = :n, nit = :nit, direccion = :d, telefono = :t, 
-                    ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a
+                    ciudad = :ci, departamento = :dep, moneda_base = :m, activa = :a, logo_path = :logo
              WHERE id = :id"
         );
         $stmt->execute([
@@ -123,6 +124,7 @@ try {
             ':dep' => trim($body['departamento'] ?? ''),
             ':m' => trim($body['moneda_base'] ?? 'HNL'),
             ':a' => (int)($body['activa'] ?? 1),
+            ':logo' => trim($body['logo_path'] ?? ''),
             ':id' => $id
         ]);
         echo json_encode(['success' => true]);

@@ -560,6 +560,7 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
         const DEBOUNCE_MS = 280;
         const HOY_SISTEMA = '<?= date('Y-m-d') ?>';
+        const EMPRESA_LOGO = '<?= !empty($empresa['logo_path']) ? BASE_URL . '/' . $empresa['logo_path'] : '' ?>';
 
         // ─── Inicialización ───────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
@@ -1112,9 +1113,12 @@ $editId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
             const headerHtml = `
         <div class="print-header">
-            <div>
-                <div style="font-weight: bold; font-size: 11pt;">VILLA FRANCIS</div>
-                <div style="font-size: 8pt; margin-top: 2px;">${emp}</div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                ${EMPRESA_LOGO ? `<img src="${EMPRESA_LOGO}" style="max-height: 50px;">` : ''}
+                <div>
+                    <div style="font-weight: bold; font-size: 11pt;">${emp}</div>
+                    <div style="font-size: 8pt; margin-top: 2px;">GESTIÓN CONTABLE</div>
+                </div>
             </div>
             <div class="print-title">COMPROBANTE DE CONTABILIDAD</div>
             <div class="print-meta">
