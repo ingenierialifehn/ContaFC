@@ -17,11 +17,11 @@ final class Database
 
     private function __construct()
     {
-        $host     = defined('DB_HOST')     ? DB_HOST     : 'mysql';
-        $port     = defined('DB_PORT')     ? DB_PORT     : 3306;
-        $dbName   = defined('DB_NAME')     ? DB_NAME     : 'contafc';
-        $user     = defined('DB_USER')     ? DB_USER     : 'root';
-        $password = defined('DB_PASSWORD') ? DB_PASSWORD : '';
+        $host     = defined('DB_HOST')     ? DB_HOST     : (getenv('DB_HOST') ?: 'contafc_db');
+        $port     = defined('DB_PORT')     ? DB_PORT     : (getenv('DB_PORT') ?: 3306);
+        $dbName   = defined('DB_NAME')     ? DB_NAME     : (getenv('DB_NAME') ?: 'contafc');
+        $user     = defined('DB_USER')     ? DB_USER     : (getenv('DB_USER') ?: 'contafc_user');
+        $password = defined('DB_PASSWORD') ? DB_PASSWORD : (getenv('DB_PASSWORD') ?: (getenv('DB_PASS') ?: 'C0nt4FC!2026'));
 
         $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
 

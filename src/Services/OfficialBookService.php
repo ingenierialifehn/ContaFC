@@ -57,7 +57,7 @@ class OfficialBookService
         }
 
         $sql = "SELECT p.id as cuenta_id, p.codigo, p.nombre, p.naturaleza,
-                       (SELECT COALESCE(SUM(debito - credito), 0) FROM asientos a2
+                       (SELECT COALESCE(SUM(ABS(debito) - ABS(credito)), 0) FROM asientos a2
                         JOIN comprobantes c2 ON a2.comprobante_id = c2.id
                         WHERE a2.cuenta_id = p.id AND c2.fecha < :periodo_inicio AND c2.estado = 'registrado') as saldo_anterior,
                        SUM(a.debito) as debitos_mes,
@@ -87,30 +87,70 @@ class OfficialBookService
             "SELECT id, codigo, nombre, naturaleza, nivel, tipo_cuenta
              FROM puc_cuentas
              WHERE empresa_id = :eid
-               AND tipo_cuenta IN ('A','P','R')
                AND activa = 1
              ORDER BY codigo ASC"
         );
         $stmt->execute([':eid' => $empresaId]);
-        $accounts = $stmt->fetchAll();
+        $rawAccounts = $stmt->fetchAll();
+
+        // Clasificación estricta por primer dígito
+        $accounts = [];
+        $incomeExpensesBalancePrev = 0.0;
+        $incomeExpensesBalanceCurr = 0.0;
+
+        foreach ($rawAccounts as $acc) {
+            $d1 = substr((string)$acc['codigo'], 0, 1);
+            if ($d1 === '1') {
+                $acc['tipo_cuenta'] = 'A'; // Activo
+            } elseif ($d1 === '2') {
+                $acc['tipo_cuenta'] = 'P'; // Pasivo
+            } elseif ($d1 === '3') {
+                $acc['tipo_cuenta'] = 'R'; // Patrimonio/Reserva
+            } elseif (in_array($d1, ['4','5','6','7'], true)) {
+                // Estas cuentas NO van directo al balance, se usan para calcular la UTILIDAD
+                $acc['tipo_cuenta'] = 'G'; // Grupo de Resultados
+            } else {
+                continue;
+            }
+            $accounts[] = $acc;
+        }
 
         $saldosPrev = $this->getBalanceSnapshotByAccount($empresaId, $prevYear, $proyectoId);
         $saldosCurr = $this->getBalanceSnapshotByAccount($empresaId, $year, $proyectoId);
 
+        // Calcular utilidad neta antes de procesar filas
+        foreach ($accounts as $acc) {
+            if ($acc['tipo_cuenta'] === 'G' && $acc['nivel'] >= 4) {
+                // Solo sumamos hojas para evitar duplicados
+                $hasChildren = false;
+                foreach ($accounts as $child) {
+                    if ($child['id'] !== $acc['id'] && str_starts_with((string)$child['codigo'], (string)$acc['codigo'])) {
+                        $hasChildren = true;
+                        break;
+                    }
+                }
+                if (!$hasChildren) {
+                    $incomeExpensesBalancePrev += ($saldosPrev[$acc['codigo']] ?? 0.0);
+                    $incomeExpensesBalanceCurr += ($saldosCurr[$acc['codigo']] ?? 0.0);
+                }
+            }
+        }
+
         $rows = [];
         foreach ($accounts as $account) {
+            if ($account['tipo_cuenta'] === 'G') continue; // Omitir ingresos/gastos del cuerpo del balance
             $codigo = (string) $account['codigo'];
             $saldoAnterior = 0.0;
             $saldoActual = 0.0;
 
             foreach ($saldosPrev as $childCode => $childSaldo) {
-                if (str_starts_with((string) $childCode, $codigo)) {
+                if (str_starts_with((string) $childCode, (string) $codigo)) {
                     $saldoAnterior += (float) $childSaldo;
                 }
             }
 
             foreach ($saldosCurr as $childCode => $childSaldo) {
-                if (str_starts_with((string) $childCode, $codigo)) {
+                if (str_starts_with((string) $childCode, (string) $codigo)) {
                     $saldoActual += (float) $childSaldo;
                 }
             }
@@ -141,6 +181,26 @@ class OfficialBookService
             ];
         }
 
+        // Agregar fila virtual de Utilidad/Pérdida al final de la sección de Patrimonio
+        // Agregar fila virtual de Utilidad/Pérdida al final de la sección de Patrimonio
+        $utilPrev = $incomeExpensesBalancePrev * -1; // Invertimos para que sea crédito (positivo = utilidad)
+        $utilCurr = $incomeExpensesBalanceCurr * -1;
+        
+        if (abs($utilPrev) > 0.001 || abs($utilCurr) > 0.001) {
+            $rows[] = [
+                'cuenta_id' => 999999,
+                'codigo' => '36999999',
+                'nombre' => ($utilCurr >= 0 ? 'UTILIDAD' : 'PÉRDIDA') . ' DEL EJERCICIO',
+                'naturaleza' => 'C',
+                'nivel' => 4,
+                'tipo_cuenta' => 'R',
+                'saldo_anterior' => $utilPrev,
+                'saldo_actual' => $utilCurr,
+                'diferencia' => $utilCurr - $utilPrev,
+                'porcentaje' => abs($utilPrev) > 0 ? (($utilCurr - $utilPrev) / abs($utilPrev)) * 100 : 0,
+            ];
+        }
+
         return $rows;
     }
 
@@ -149,14 +209,17 @@ class OfficialBookService
      */
     private function getBalanceSnapshotByAccount(int $empresaId, int $year, ?int $proyectoId = null): array
     {
-        $fechaExpr = $this->asientosTieneFecha ? 'COALESCE(a.fecha, c.fecha)' : 'c.fecha';
+        // Usar c.fecha como fecha autoritativa del periodo.
+        // COALESCE(a.fecha, c.fecha) causa que asientos importados con a.fecha=2023
+        // pero cuyo comprobante tiene c.fecha=2024/2025 aparezcan en balances históricos.
+        $fechaExpr = 'c.fecha';
         $proyFilter = $proyectoId ? 'AND a.proyecto_id = :proy' : '';
 
         $sql = "SELECT
                     p.codigo,
                     COALESCE(SUM(
                         CASE
-                            WHEN c.id IS NOT NULL THEN a.debito - a.credito
+                            WHEN c.id IS NOT NULL THEN (a.debito - a.credito)
                             ELSE 0
                         END
                     ), 0) AS saldo_neto
@@ -171,8 +234,8 @@ class OfficialBookService
                    AND c.estado = 'registrado'
                    AND YEAR($fechaExpr) <= :year
                 WHERE p.empresa_id = :eid
-                  AND p.tipo_cuenta IN ('A','P','R')
                   AND p.activa = 1
+                  AND SUBSTR(p.codigo, 1, 1) IN ('1','2','3','4','5','6')
                 GROUP BY p.id, p.codigo
                 HAVING ABS(saldo_neto) > 0.001
                 ORDER BY p.codigo ASC";
@@ -186,6 +249,11 @@ class OfficialBookService
         }
 
         $stmt = $this->db->prepare($sql);
+        
+        // DEBUG LOG SQL
+        $logParams = json_encode($params);
+        file_put_contents(__DIR__ . '/../../scratch/sql_debug.log', date('Y-m-d H:i:s') . " - SQL: $sql | Params: $logParams\n", FILE_APPEND);
+
         $stmt->execute($params);
 
         $balances = [];
@@ -194,6 +262,86 @@ class OfficialBookService
         }
 
         return $balances;
+    }
+
+    /**
+     * Obtiene el Estado de Resultados para un año específico con jerarquía completa.
+     */
+    public function getIncomeStatement(int $empresaId, int $year, ?int $proyectoId = null): array
+    {
+        // 1. Obtener todas las cuentas de resultados (4,5,6,7)
+        $stmt = $this->db->prepare(
+            "SELECT id, codigo, nombre, naturaleza, nivel, tipo_cuenta
+             FROM puc_cuentas
+             WHERE empresa_id = :eid 
+               AND activa = 1 
+               AND SUBSTR(codigo, 1, 1) IN ('4','5','6','7')
+             ORDER BY codigo ASC"
+        );
+        $stmt->execute([':eid' => $empresaId]);
+        $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2. Obtener movimientos netos del año
+        $proyFilter = $proyectoId ? 'AND a.proyecto_id = :proy' : '';
+        $sqlMovs = "SELECT p.codigo, SUM(a.debito - a.credito) as neto
+                    FROM asientos a
+                    JOIN comprobantes c ON a.comprobante_id = c.id
+                    JOIN puc_cuentas p ON a.cuenta_id = p.id
+                    WHERE a.empresa_id = :eid 
+                      AND c.estado = 'registrado' 
+                      AND c.fecha >= :startDate 
+                      AND c.fecha <= :endDate
+                      $proyFilter
+                      AND SUBSTR(p.codigo, 1, 1) IN ('4','5','6','7')
+                    GROUP BY p.codigo";
+        
+        $startDate = ($year - 1) . "-12-01";
+        $endDate = $year . "-12-31";
+        $params = [':eid' => $empresaId, ':startDate' => $startDate, ':endDate' => $endDate];
+        if ($proyectoId) $params[':proy'] = $proyectoId;
+        
+        $stmtMovs = $this->db->prepare($sqlMovs);
+        $stmtMovs->execute($params);
+        $saldosNetos = [];
+        foreach ($stmtMovs->fetchAll() as $sm) {
+            $saldosNetos[$sm['codigo']] = (float)$sm['neto'];
+        }
+
+        // 3. Procesar saldos y jerarquía
+        $rows = [];
+        foreach ($accounts as $acc) {
+            $codigo = (string)$acc['codigo'];
+            $saldoTotal = 0.0;
+
+            // 1. Sumar todos los saldos de hijos (o el propio si es hoja)
+            foreach ($saldosNetos as $cCode => $cNeto) {
+                if (str_starts_with((string)$cCode, (string)$codigo)) {
+                    $saldoTotal += $cNeto;
+                }
+            }
+
+            // 2. Omitir cuentas sin saldo para limpiar el reporte
+            if (abs($saldoTotal) < 0.01) continue;
+
+            // 3. Ajustar por naturaleza para que los saldos se vean como valores positivos en el reporte
+            if ($acc['naturaleza'] === 'C') {
+                $saldoTotal *= -1;
+            } else {
+                $saldoTotal = abs($saldoTotal);
+            }
+
+            $rows[] = [
+                'id' => $acc['id'],
+                'codigo' => $codigo,
+                'nombre' => $acc['nombre'],
+                'nivel' => $acc['nivel'],
+                'naturaleza' => $acc['naturaleza'],
+                'saldo' => $saldoTotal,
+                'tipo_cuenta' => substr($codigo, 0, 1)
+            ];
+        }
+
+        return $rows;
     }
 
     private function tableHasColumn(string $table, string $column): bool
@@ -220,7 +368,7 @@ class OfficialBookService
     public function getInventoryBalances(int $empresaId, int $year): array
     {
         $sql = "SELECT p.id as cuenta_id, p.codigo, p.nombre, p.naturaleza, p.nivel, p.tipo_cuenta,
-                       (SELECT COALESCE(SUM(debito - credito), 0) FROM asientos a2
+                       (SELECT COALESCE(SUM(a2.debito - a2.credito), 0) FROM asientos a2
                         JOIN comprobantes c2 ON a2.comprobante_id = c2.id
                         WHERE a2.cuenta_id = p.id AND YEAR(c2.fecha) < :y1 AND c2.estado = 'registrado') as saldo_anterior,
                        SUM(a.debito) as debitos_anio,

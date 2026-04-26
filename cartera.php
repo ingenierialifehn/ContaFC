@@ -18,9 +18,15 @@ try {
     $terceros = $db->query(
         "SELECT id, razon_social AS nombre FROM terceros WHERE empresa_id = " . Auth::empresaId() . " ORDER BY razon_social"
     )->fetchAll();
+
+    // Listado de proyectos
+    $proyectos = $db->query(
+        "SELECT id, nombre FROM proyectos WHERE empresa_id = " . Auth::empresaId() . " AND activo = 1 ORDER BY nombre"
+    )->fetchAll();
 } catch (\Throwable $e) {
-    echo "<script>console.error('PHP Error loading terceros: " . addslashes($e->getMessage()) . "');</script>";
+    echo "<script>console.error('PHP Error loading data: " . addslashes($e->getMessage()) . "');</script>";
     $terceros = [];
+    $proyectos = [];
 }
 
 $activeNav = 'cartera';
@@ -96,7 +102,7 @@ $activeNav = 'cartera';
                     <table class="w-full text-left">
                         <thead>
                             <tr class="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] border-b border-white/[0.04]">
-                                <th class="px-8 py-6">Ref / Documento</th>
+                                <th class="px-8 py-6">Proyecto / Lote</th>
                                 <th class="px-8 py-6">Cliente / Deudor</th>
                                 <th class="px-8 py-6 text-right">Valor Total</th>
                                 <th class="px-8 py-6 text-right">Saldo Actual</th>
@@ -189,14 +195,25 @@ $activeNav = 'cartera';
             <button onclick="closeModal('modal-credito')" class="w-10 h-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition">✕</button>
         </div>
         <form id="form-credito" class="grid grid-cols-2 gap-6" onsubmit="submitCredito(event)">
-            <div class="col-span-2">
-                <label class="label-field">Cliente / Deudor</label>
-                <select name="tercero_id" required class="input-field w-full">
-                    <option value="">— Seleccionar —</option>
-                    <?php foreach($terceros as $t): ?>
-                    <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="col-span-2 grid grid-cols-2 gap-6">
+                <div>
+                    <label class="label-field">Cliente / Deudor</label>
+                    <select name="tercero_id" required class="input-field w-full">
+                        <option value="">— Seleccionar —</option>
+                        <?php foreach($terceros as $t): ?>
+                        <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-field">Proyecto / Residencial</label>
+                    <select name="proyecto_id" class="input-field w-full">
+                        <option value="">— General / Ninguno —</option>
+                        <?php foreach($proyectos as $p): ?>
+                        <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
             <div>
                 <label class="label-field">Referencia / Número Lote</label>
@@ -384,7 +401,8 @@ async function loadCreditos() {
         st.innerHTML = data.map(c => `
             <tr class="group hover:bg-white/[0.01] transition-all">
                 <td class="px-8 py-6">
-                    <a href="#" onclick="verEstadoCuenta(${c.id})" class="text-[11px] font-black text-brand hover:underline italic uppercase">${c.referencia_doc || `CR-${String(c.id).padStart(5,'0')}`}</a>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mb-1">${c.proyecto_nombre || 'General'}</div>
+                    <a href="#" onclick="verEstadoCuenta(${c.id})" class="text-[11px] font-black text-brand hover:underline italic uppercase">${c.referencia_doc || `Lote P-${String(c.id).padStart(3,'0')}`}</a>
                 </td>
                 <td class="px-8 py-6 font-bold text-slate-200 text-sm">${c.tercero_nombre || '—'}</td>
                 <td class="px-8 py-6 text-right font-black text-white tabular-nums">${f.format(c.valor_total)}</td>

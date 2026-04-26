@@ -13,7 +13,8 @@ $db  = Database::getInstance()->getPdo();
 $eid = Auth::empresaId();
 $uid = Auth::userId();
 $method = $_SERVER['REQUEST_METHOD'];
-$asientosTieneFecha = tableHasColumn($db, 'asientos', 'fecha');
+$method = $_SERVER['REQUEST_METHOD'];
+$asientosTieneFecha = true;
 
 try {
     if ($method === 'POST') {
@@ -93,9 +94,7 @@ try {
         Auth::requirePermiso('comprobantes', 'r');
         $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
         if ($id) {
-            $fechaOperativaSql = $asientosTieneFecha
-                ? "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_operativa,"
-                : "c.fecha AS fecha_operativa,";
+            $fechaOperativaSql = "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_operativa,";
             $stmt = $db->prepare(
                 "SELECT c.*, {$fechaOperativaSql} t.razon_social as tercero_nombre, tc.nombre as tipo_nombre, tc.codigo as tipo_codigo, u.username as usuario_registro
                  FROM comprobantes c
@@ -128,85 +127,69 @@ try {
             $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
             $offset = ($page - 1) * $limit;
-            $filtroAmpliado = false;
             
             $whereEstado = ($estado === 'todos') ? "1=1" : "c.estado = :e";
-            $whereBase = "WHERE c.empresa_id = :eid
-                          AND $whereEstado";
-            $whereFecha = $asientosTieneFecha
-                ? "AND (
-                         c.fecha BETWEEN :d AND :h
-                         OR EXISTS (
-                             SELECT 1
-                             FROM asientos a
-                             WHERE a.comprobante_id = c.id
-                               AND a.fecha BETWEEN :d2 AND :h2
-                         )
-                     )"
-                : "AND c.fecha BETWEEN :d AND :h";
-            $where = "$whereBase
-                      $whereFecha";
+            
+            // Query de Conteo (Total Comprobantes y Total Asientos)
+            $sqlCount = "SELECT COUNT(*) as total_comp, 
+                                COALESCE(SUM(ca.cnt), 0) as total_asientos 
+                         FROM comprobantes c 
+                         LEFT JOIN (
+                             SELECT comprobante_id, COUNT(*) as cnt, MAX(fecha) as max_f 
+                             FROM asientos 
+                             GROUP BY comprobante_id
+                         ) ca ON ca.comprobante_id = c.id
+                         WHERE c.empresa_id = :eid 
+                           AND $whereEstado
+                           AND COALESCE(ca.max_f, c.fecha) BETWEEN :d AND :h";
 
-            $stmtCount = $db->prepare("SELECT COUNT(*) FROM comprobantes c $where");
+            $stmtCount = $db->prepare($sqlCount);
             $stmtCount->bindValue(':eid', $eid, PDO::PARAM_INT);
             if ($estado !== 'todos') $stmtCount->bindValue(':e', $estado);
             $stmtCount->bindValue(':d', $desde);
             $stmtCount->bindValue(':h', $hasta);
-            if ($asientosTieneFecha) {
-                $stmtCount->bindValue(':d2', $desde);
-                $stmtCount->bindValue(':h2', $hasta);
-            }
             $stmtCount->execute();
-            $totalRecords = (int)$stmtCount->fetchColumn();
+            
+            $counts = $stmtCount->fetch(PDO::FETCH_ASSOC);
+            $totalRecords = (int)($counts['total_comp'] ?? 0);
+            $totalAsientos = (int)($counts['total_asientos'] ?? 0);
+            
+            file_put_contents(__DIR__ . '/../debug_comprobantes.txt', date('Y-m-d H:i:s') . " - WHERE: (Strict Filter) | Params: d=$desde, h=$hasta, estado=$estado | Count Comp: $totalRecords | Count Asientos: $totalAsientos\n", FILE_APPEND);
 
-            if ($totalRecords === 0) {
-                $stmtCountAll = $db->prepare("SELECT COUNT(*) FROM comprobantes c $whereBase");
-                $stmtCountAll->bindValue(':eid', $eid, PDO::PARAM_INT);
-                if ($estado !== 'todos') $stmtCountAll->bindValue(':e', $estado);
-                $stmtCountAll->execute();
-                $totalAllRecords = (int)$stmtCountAll->fetchColumn();
-
-                if ($totalAllRecords > 0) {
-                    $where = $whereBase;
-                    $totalRecords = $totalAllRecords;
-                    $filtroAmpliado = true;
-                }
-            }
-
-            $fechaAsientoSql = $asientosTieneFecha
-                ? "COALESCE((SELECT MAX(a.fecha) FROM asientos a WHERE a.comprobante_id = c.id AND a.fecha IS NOT NULL), c.fecha) AS fecha_asiento,"
-                : "c.fecha AS fecha_asiento,";
+            // Query de Listado
             $sql = "SELECT c.*, tc.codigo as tipo_comp, tc.nombre as tipo_nombre, t.razon_social as tercero,
-                            {$fechaAsientoSql}
-                            u.username as usuario_modifico
+                            COALESCE(ca.max_f, c.fecha) AS fecha_asiento,
+                            u.username as usuario_modifico,
+                            COALESCE(ca.cnt, 0) as cantidad_asientos
                      FROM comprobantes c
                      JOIN tipos_comprobante tc ON c.tipo_comp_id = tc.id
                      LEFT JOIN terceros t ON c.tercero_id = t.id
                      LEFT JOIN usuarios u ON c.usuario_id = u.id
-                     $where
+                     LEFT JOIN (
+                         SELECT comprobante_id, COUNT(*) as cnt, MAX(fecha) as max_f 
+                         FROM asientos 
+                         GROUP BY comprobante_id
+                     ) ca ON ca.comprobante_id = c.id
+                     WHERE c.empresa_id = :eid 
+                       AND $whereEstado
+                       AND COALESCE(ca.max_f, c.fecha) BETWEEN :d AND :h
                      ORDER BY fecha_asiento DESC, c.id DESC
                      LIMIT :limit OFFSET :offset";
             
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':eid', $eid, PDO::PARAM_INT);
             if ($estado !== 'todos') $stmt->bindValue(':e', $estado);
-            if (!$filtroAmpliado) {
-                $stmt->bindValue(':d', $desde);
-                $stmt->bindValue(':h', $hasta);
-                if ($asientosTieneFecha) {
-                    $stmt->bindValue(':d2', $desde);
-                    $stmt->bindValue(':h2', $hasta);
-                }
-            }
+            $stmt->bindValue(':d', $desde);
+            $stmt->bindValue(':h', $hasta);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
 
             echo json_encode([
                 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
-                'filters_relaxed' => $filtroAmpliado,
                 'pagination' => [
                     'total' => $totalRecords,
+                    'total_asientos' => $totalAsientos,
                     'page' => $page,
                     'limit' => $limit,
                     'pages' => ceil($totalRecords / $limit)
@@ -242,6 +225,8 @@ try {
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();
     http_response_code(500);
+    $errorMsg = $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine();
+    file_put_contents(__DIR__ . '/../debug_comprobantes_error.txt', date('Y-m-d H:i:s') . ' - ' . $errorMsg . "\n", FILE_APPEND);
     echo json_encode(['error' => $e->getMessage()]);
 }
 

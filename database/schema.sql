@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS `usuarios_empresas` (
     CONSTRAINT `fk_ue_empresa` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Mappings de usuarios a proyectos
+CREATE TABLE IF NOT EXISTS `usuarios_proyectos` (
+    `usuario_id`  INT UNSIGNED NOT NULL,
+    `proyecto_id` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`usuario_id`, `proyecto_id`),
+    CONSTRAINT `fk_up_usuario`  FOREIGN KEY (`usuario_id`)  REFERENCES `usuarios`  (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_up_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. PLAN ÚNICO DE CUENTAS (PUC)
 -- Estructura jerárquica: Clase > Grupo > Cuenta > Subcuenta > Auxiliar
@@ -204,6 +213,7 @@ CREATE TABLE IF NOT EXISTS `proyectos` (
     `empresa_id`  SMALLINT UNSIGNED  NOT NULL,
     `codigo`      VARCHAR(10)        NOT NULL,
     `nombre`      VARCHAR(100)       NOT NULL,
+    `logo_path`   VARCHAR(255)       DEFAULT NULL,
     `activo`      TINYINT(1)         NOT NULL DEFAULT 1,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_proyecto_empresa` (`empresa_id`, `codigo`),

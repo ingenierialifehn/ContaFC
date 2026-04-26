@@ -23,9 +23,10 @@ class CarteraService
 
     public function getCreditos(int $empresaId, string $estado = 'activo'): array
     {
-        $sql = "SELECT c.*, t.razon_social AS tercero_nombre
+        $sql = "SELECT c.*, t.razon_social AS tercero_nombre, p.nombre AS proyecto_nombre
                 FROM cartera_creditos c
                 LEFT JOIN terceros t ON t.id = c.tercero_id
+                LEFT JOIN proyectos p ON p.id = c.proyecto_id
                 WHERE c.empresa_id = :eid AND c.estado = :estado
                 ORDER BY c.created_at DESC";
         $st = $this->db->prepare($sql);
@@ -36,9 +37,10 @@ class CarteraService
     public function getCreditoById(int $id, int $empresaId): ?array
     {
         $st = $this->db->prepare(
-            "SELECT c.*, t.razon_social AS tercero_nombre
+            "SELECT c.*, t.razon_social AS tercero_nombre, p.nombre AS proyecto_nombre
              FROM cartera_creditos c
              LEFT JOIN terceros t ON t.id = c.tercero_id
+             LEFT JOIN proyectos p ON p.id = c.proyecto_id
              WHERE c.id = :id AND c.empresa_id = :eid"
         );
         $st->execute([':id' => $id, ':eid' => $empresaId]);
@@ -51,17 +53,18 @@ class CarteraService
         try {
             $st = $this->db->prepare(
                 "INSERT INTO cartera_creditos
-                    (empresa_id, tercero_id, referencia_doc, descripcion,
+                    (empresa_id, tercero_id, proyecto_id, referencia_doc, descripcion,
                      valor_total, saldo_actual, tasa_interes, cuotas_totales,
                      frecuencia, fecha_inicio, estado)
                  VALUES
-                    (:eid, :tid, :ref, :desc,
+                    (:eid, :tid, :pid, :ref, :desc,
                      :vt, :sa, :ti, :ct,
                      :frec, :fi, 'activo')"
             );
             $st->execute([
                 ':eid'  => $empresaId,
                 ':tid'  => (int)$d['tercero_id'],
+                ':pid'  => !empty($d['proyecto_id']) ? (int)$d['proyecto_id'] : null,
                 ':ref'  => $d['referencia_doc'] ?? '',
                 ':desc' => $d['descripcion'] ?? '',
                 ':vt'   => (float)$d['valor_total'],

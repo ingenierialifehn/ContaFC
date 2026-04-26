@@ -99,6 +99,15 @@ $activeNav = 'comprobantes';
                 </svg>
                 Filtrar
             </button>
+
+            <!-- Modo En Vivo -->
+            <div class="ml-auto flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-200">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="poll-toggle" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    <span class="ml-2 text-xs font-medium text-slate-600 select-none">Auto-actualizar</span>
+                </label>
+            </div>
         </div>
 
         <!-- Tabla -->
@@ -162,6 +171,8 @@ $activeNav = 'comprobantes';
         const recordsLimit = 50;
         const canDelete = <?= Auth::canAccess('comprobantes', 'd') ? 'true' : 'false' ?>;
 
+        let pollInterval = null;
+
         document.addEventListener('DOMContentLoaded', () => {
             flatpickr("#f-desde, #f-hasta", {
                 dateFormat: "Y-m-d",
@@ -171,23 +182,53 @@ $activeNav = 'comprobantes';
                 locale: "es"
             });
             cargarListado(1);
+
+            // Polling Toggle Logic
+            if (document.getElementById('poll-toggle').checked) {
+                startPolling();
+            }
+
+            document.getElementById('poll-toggle').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    startPolling();
+                } else {
+                    stopPolling();
+                }
+            });
         });
 
-        async function cargarListado(page = 1) {
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(() => {
+                // Solo recargamos si estamos en la página 1 para no interrumpir la navegación profunda
+                if (currentPage === 1) {
+                    cargarListado(1, true); // true = silent reload
+                }
+            }, 10000); // Cada 10 segundos
+        }
+
+        function stopPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = null;
+        }
+
+        async function cargarListado(page = 1, silent = false) {
             currentPage = page;
             const desde = document.getElementById('f-desde').value;
             const hasta = document.getElementById('f-hasta').value;
             const estado = document.getElementById('f-estado').value;
 
             const tbody = document.getElementById('lista-comprobantes');
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10"><div class="flex items-center justify-center gap-3"><div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando datos...</div></td></tr>';
+            
+            if (!silent) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10"><div class="flex items-center justify-center gap-3"><div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando datos...</div></td></tr>';
+            }
 
             try {
                 const res = await fetch(`<?= BASE_URL ?>/api/comprobantes.php?desde=${desde}&hasta=${hasta}&estado=${estado}&page=${currentPage}&limit=${recordsLimit}`);
                 const json = await res.json();
                 const data = json.data || [];
                 const pag = json.pagination || {};
-                const filtersRelaxed = !!json.filters_relaxed;
 
                 if (!data.length) {
                     tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-500">No se encontraron comprobantes para el filtro aplicado.</td></tr>';
@@ -220,7 +261,12 @@ $activeNav = 'comprobantes';
             <tr class="hover:bg-slate-50/80 transition-colors group">
                 <td class="px-4 py-3 font-mono text-slate-700 font-medium">${r.tipo_comp}-${String(r.numero).padStart(5, '0')}</td>
                 <td class="px-4 py-2.5">
-                    <div class="text-slate-900 font-semibold">${r.tipo_nombre}</div>
+                    <div class="text-slate-900 font-semibold flex items-center gap-2">
+                        ${r.tipo_nombre}
+                        <span class="text-[10px] font-medium bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100" title="Cantidad de asientos en este comprobante">
+                            ${r.cantidad_asientos} asientos
+                        </span>
+                    </div>
                     <div class="text-[11px] text-slate-400 truncate max-w-[250px]" title="${r.observaciones || ''}">${r.observaciones || '<span class="italic opacity-50">Sin observaciones</span>'}</div>
                 </td>
                 <td class="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">${formatoFecha}</td>
@@ -239,10 +285,7 @@ $activeNav = 'comprobantes';
 
                 const start = ((pag.page - 1) * pag.limit) + 1;
                 const end = Math.min(pag.page * pag.limit, pag.total);
-                const infoBase = `Mostrando <span class="font-bold text-slate-800">${start}-${end}</span> de <span class="font-bold text-slate-800">${pag.total}</span> registros`;
-                document.getElementById('info-count').innerHTML = filtersRelaxed
-                    ? `${infoBase} <span class="text-amber-600">· Se mostraron todos los comprobantes disponibles porque el rango no encontró coincidencias.</span>`
-                    : infoBase;
+                document.getElementById('info-count').innerHTML = `Mostrando <span class="font-bold text-slate-800">${start}-${end}</span> de <span class="font-bold text-slate-800">${pag.total}</span> registros &nbsp;|&nbsp; Total de asientos en filtro: <span class="font-bold text-indigo-700">${pag.total_asientos || 0}</span>`;
 
                 updatePaginationControls(pag.page, pag.pages);
 

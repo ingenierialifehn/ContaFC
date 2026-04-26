@@ -1,0 +1,49 @@
+1. Which n8n workflow have you used and what for?
+"I designed a Real-Time Sales Synchronization workflow. It connected my custom local POS system (On-Prem) with a cloud-based CRM (like HubSpot/Zoho).
+
+The Flow: Whenever a sale was closed in the POS, it triggered a Webhook to n8n. The workflow then validated inventory in MySQL, formatted the customer and transaction data using a Code Node (JavaScript), and finally created the invoice in the CRM and updated the stock levels in the cloud."
+
+2. What solution did you provide for the company?
+"I solved the data fragmentation issue. Previously, physical inventory and digital records didn't match, and invoicing was manual. My solution automated stock and revenue updates, reducing human error by 90% and saving hours of administrative work every single day."
+
+3. Best Trigger: Which one is it?
+"Definitely the Webhook Node.
+
+Why: Because it enables an Event-Driven Architecture. Unlike the 'Schedule' node (Polling), which wastes resources checking for updates every few minutes, Webhooks react in real-time the moment an event happens in the source application. This is crucial for transactional systems like a POS."
+
+4. How many nodes do you usually use?
+"It depends on the complexity, but my production workflows usually range between 15 and 30 nodes.
+
+Important Nuance: If a workflow grows larger than that, I prefer to modularize it using the 'Execute Workflow' node to call sub-workflows. This keeps the architecture clean, reusable, and easy to debug."
+
+5. Transformation Node: Which one do you use?
+"As a developer, my favorite is the Code Node (formerly Function Node).
+
+Why: While nodes like 'Edit Fields' are useful, the Code Node with JavaScript/TypeScript gives me full control to manipulate complex JSON structures, perform advanced mathematical calculations, or cleanse dirty data before sending it to the database."
+
+6. Which databases do you use?
+"I use a hybrid stack. I use SQL Server and MySQL for transactional relational data (invoicing, inventory) and MongoDB for audit logs or unstructured data. I have also recently integrated Supabase."
+
+7. How do you avoid duplicates?
+"I implement a manual 'Upsert' (Update or Insert) logic:
+
+First, I use a node to Lookup if the record (e.g., Customer ID or Email) already exists in the DB.
+
+Then, I use an If (or Switch) node.
+
+If it exists (True): It goes down the 'Update' path.
+
+If it doesn't exist (False): It goes down the 'Create' path.
+
+Pro Tip: I also use the Merge node in 'Remove Key Matches' mode to filter incoming data against an existing list."
+
+CRITICAL QUESTION: Migration from Workato to n8n (The Strategic Answer)
+Your Answer: "To be totally honest, I haven't performed a direct migration specifically from Workato yet, but as a Software Engineer, I understand that the underlying business logic is the same.
+
+For me, a migration isn't just 'copy-pasting'; it is logic translation:
+
+Analysis: I analyze what the 'Recipe' does in Workato (Triggers, Actions, Logic).
+
+Reconstruction: I have the technical ability to read that logic and reconstruct it in n8n more efficiently—often replacing multiple visual steps in Workato with a single optimized Code Node in n8n.
+
+Data: I understand how to map input/output JSONs between platforms.

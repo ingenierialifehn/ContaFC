@@ -1,0 +1,319 @@
+2026-04-25 16:42:35 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:42:48 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:49 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:49 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:49 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:49 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:50 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:50 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:50 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:50 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:50 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:42:59 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:43:06 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-01-31, estado=registrado | Count: 0
+2026-04-25 16:44:05 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:44:20 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count: 56
+2026-04-25 16:44:27 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count: 56
+2026-04-25 16:44:44 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:47:22 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-04-01, h=2023-04-30, estado=registrado | Count: 0
+2026-04-25 16:47:33 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-04-01, h=2023-04-30, estado=registrado | Count: 0
+2026-04-25 16:50:39 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:50:58 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count: 56
+2026-04-25 16:51:21 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count: 56
+2026-04-25 16:51:33 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:51:39 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count: 0
+2026-04-25 16:51:45 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2026-04-25, estado=registrado | Count: 612
+2026-04-25 16:51:56 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2026-04-25, estado=registrado | Count: 612
+2026-04-25 16:52:26 - WHERE: WHERE c.empresa_id = :eid
+                          AND c.estado = :e
+                      AND (
+                         c.fecha BETWEEN :d AND :h
+                         OR EXISTS (
+                             SELECT 1
+                             FROM asientos a
+                             WHERE a.comprobante_id = c.id
+                               AND a.fecha BETWEEN :d2 AND :h2
+                         )
+                     ) | Params: d=2023-01-01, h=2026-04-25, estado=registrado | Count: 612
+2026-04-25 16:57:06 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 16:57:27 - WHERE: (Strict Filter) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count Comp: 56 | Count Asientos: 4210
+2026-04-25 16:57:51 - WHERE: (Strict Filter) | Params: d=2023-01-01, h=2023-12-31, estado=registrado | Count Comp: 56 | Count Asientos: 4210
+2026-04-25 16:59:00 - WHERE: (Strict Filter) | Params: d=2024-01-01, h=2024-12-31, estado=registrado | Count Comp: 275 | Count Asientos: 16792
+2026-04-25 16:59:20 - WHERE: (Strict Filter) | Params: d=2025-01-01, h=2025-12-31, estado=registrado | Count Comp: 281 | Count Asientos: 8822
+2026-04-25 16:59:36 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:01:18 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:02:56 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:06 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:16 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:26 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:36 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:46 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:03:56 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:04:06 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:04:46 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:05:15 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-25 17:05:16 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-25, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-26 11:15:34 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-26 11:40:51 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-26 11:47:44 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-26 12:34:12 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0

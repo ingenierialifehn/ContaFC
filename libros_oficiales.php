@@ -110,6 +110,8 @@ try {
     for ($anio = $currentYear; $anio >= $minAnio; $anio--) {
         $balanceYears[] = $anio;
     }
+
+    $latestYearWithData = (int) ($db->query("SELECT MAX(YEAR(fecha)) FROM comprobantes WHERE empresa_id = $eid AND estado = 'registrado'")->fetchColumn() ?: $currentYear);
 } catch (\Throwable $e) {
     die("Error crítico de sistema: " . $e->getMessage());
 }
@@ -251,24 +253,45 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                                     } else {
                                         foreach($periodosYears as $py): 
                                 ?>
-                                <option value="<?= $py['anio'] ?>">Balance Anual: <?= $py['anio'] ?></option>
+                                <option value="<?= $py['anio'] ?>" <?= (int)$py['anio'] === $latestYearWithData ? 'selected' : '' ?>>Balance Anual: <?= $py['anio'] ?></option>
                                 <?php 
                                         endforeach; 
                                     }
                                 ?>
                             </select>
                         </div>
-                        <div class="space-y-1">
+                        <?php 
+                            $assignedPids = \ContaFC\Core\Auth::getAssignedProjectIds();
+                            $isAdmin = \ContaFC\Core\Auth::user()['rol'] === 'admin';
+                            
+                            if ($isAdmin) {
+                                $stmtProy = $db->prepare("SELECT id, nombre, codigo FROM proyectos WHERE empresa_id = :eid AND activo = 1 ORDER BY nombre ASC");
+                                $stmtProy->execute([':eid' => $eid]);
+                                $proyectosList = $stmtProy->fetchAll();
+                            } else {
+                                if (empty($assignedPids)) {
+                                    $proyectosList = [];
+                                } else {
+                                    $placeholders = implode(',', array_fill(0, count($assignedPids), '?'));
+                                    $stmtProy = $db->prepare("SELECT id, nombre, codigo FROM proyectos WHERE empresa_id = ? AND id IN ($placeholders) AND activo = 1 ORDER BY nombre ASC");
+                                    $stmtProy->execute(array_merge([$eid], $assignedPids));
+                                    $proyectosList = $stmtProy->fetchAll();
+                                }
+                            }
+                            
+                            $showDropdown = $isAdmin || count($proyectosList) > 1;
+                            $singleProjectId = (!$isAdmin && count($proyectosList) === 1) ? $proyectosList[0]['id'] : '';
+                        ?>
+                        <div class="space-y-1" <?= !$showDropdown ? 'style="display:none;"' : '' ?>>
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Proyecto / Centro de Beneficio</label>
                             <select id="p_inv_proy" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
+                                <?php if ($isAdmin): ?>
                                 <option value="" selected>-- Todos los Proyectos --</option>
-                                <?php 
-                                    $stmtProy = $db->prepare("SELECT id, nombre, codigo FROM proyectos WHERE empresa_id = :eid AND activo = 1 ORDER BY nombre ASC");
-                                    $stmtProy->execute([':eid' => $eid]);
-                                    $proyectosList = $stmtProy->fetchAll();
-                                    foreach($proyectosList as $proy):
-                                ?>
-                                <option value="<?= $proy['id'] ?>"><?= $proy['codigo'] ?> - <?= $proy['nombre'] ?></option>
+                                <?php endif; ?>
+                                <?php foreach($proyectosList as $proy): ?>
+                                <option value="<?= $proy['id'] ?>" <?= $proy['id'] == $singleProjectId ? 'selected' : '' ?>>
+                                    <?= $proy['codigo'] ?> - <?= $proy['nombre'] ?>
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -288,20 +311,44 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                     </div>
                 </div>
 
-            </div>
-
-             <!-- Banner Legal -->
-            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-12 rounded-[2.5rem] border-l-[10px] border-honduras shadow-2xl text-white">
-                <div class="flex items-center gap-10">
-                    <div class="w-24 h-24 bg-white/5 rounded-3xl flex items-center justify-center border border-white/5">
-                        <svg class="w-12 h-12 text-honduras" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-3xl font-black mb-2 italic tracking-tighter uppercase">Cumplimiento SAR / Ley del Comerciante</h4>
-                        <p class="text-sm text-slate-400 max-w-2xl font-medium leading-relaxed">Los Libros Oficiales deben imprimirse mensualmente o anualmente en hojas autorizadas y foliadas. El sistema garantiza la secuencia numérica y los totales cruzados entre Diario y Mayor para evitar sanciones administrativas.</p>
+                <!-- Estado de Resultados -->
+                <div class="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm hover:shadow-2xl transition group relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-amber-50 rounded-full blur-2xl group-hover:bg-amber-100 transition duration-500"></div>
+                    <h3 class="text-2xl font-black text-slate-800 mb-2 relative">Estado de Resultados</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-6 border-b border-slate-50 pb-4">Ingresos, Gastos y Utilidad</p>
+                    
+                    <div class="space-y-4">
+                         <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Año Fiscal</label>
+                            <select id="p_res_year" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
+                                <?php 
+                                    foreach($periodosYears as $py): 
+                                ?>
+                                <option value="<?= $py['anio'] ?>" <?= (int)$py['anio'] === $latestYearWithData ? 'selected' : '' ?>>Año: <?= $py['anio'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="space-y-1" <?= !$showDropdown ? 'style="display:none;"' : '' ?>>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Proyecto / Centro de Beneficio</label>
+                            <select id="p_res_proy" class="w-full h-11 border border-slate-200 rounded-2xl px-4 outline-none text-xs font-black shadow-sm">
+                                <?php if ($isAdmin): ?>
+                                <option value="" selected>-- Todos los Proyectos --</option>
+                                <?php endif; ?>
+                                <?php foreach($proyectosList as $proy): ?>
+                                <option value="<?= $proy['id'] ?>" <?= $proy['id'] == $singleProjectId ? 'selected' : '' ?>>
+                                    <?= $proy['codigo'] ?> - <?= $proy['nombre'] ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 mt-6">
+                            <button onclick="generarLibro('RESULTADOS')" class="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-amber-600 transition shadow-lg shadow-black/10">Generar Resultados</button>
+                        </div>
                     </div>
                 </div>
+
             </div>
+
         </div>
     </div>
 </main>
@@ -317,7 +364,7 @@ function getVal(id) {
 }
 
 function generarLibro(tipo, format = 'pdf') {
-    const idMap = { 'DIARIO': 'p_diario', 'MAYOR': 'p_mayor', 'INVENTARIOS': 'p_inv' };
+    const idMap = { 'DIARIO': 'p_diario', 'MAYOR': 'p_mayor', 'INVENTARIOS': 'p_inv', 'RESULTADOS': 'p_res_year' };
     
     const pId = getVal(idMap[tipo]);
     const folio = '1';
@@ -333,9 +380,13 @@ function generarLibro(tipo, format = 'pdf') {
         const proyId = getVal('p_inv_proy');
         if (sub) extra = `&subtipo=${sub}`;
         if (proyId) extra += `&proyecto_id=${proyId}`;
+    } else if (tipo === 'RESULTADOS') {
+        const proyId = getVal('p_res_proy');
+        if (proyId) extra += `&proyecto_id=${proyId}`;
     }
 
-    const url = `<?= BASE_URL ?>/api/libros_oficiales.php?tipo=${tipo}&pid=${pId}&folio=${folio}${extra}${format === 'excel' ? '&format=excel' : ''}`;
+    const ts = Date.now();
+    const url = `<?= BASE_URL ?>/api/libros_oficiales.php?tipo=${tipo}&pid=${pId}&folio=${folio}${extra}${format === 'excel' ? '&format=excel' : ''}&_t=${ts}`;
 
     if (format === 'excel') {
         window.open(url);

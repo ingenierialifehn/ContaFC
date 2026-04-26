@@ -35,6 +35,10 @@ RUN groupadd -g 1000 appgroup && useradd -u 1000 -g appgroup -s /bin/bash -m app
 # Creamos el directorio temporal para las migraciones y asignamos permisos
 RUN mkdir -p /var/www/tmp && chown -R appuser:appgroup /var/www/tmp /var/www/html
 
+# ─── Configuración de PHP-FPM para permitir variables de entorno ─────────────
+USER root
+RUN sed -i 's/;clear_env = no/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf
+
 USER appuser
 
 EXPOSE 9000
