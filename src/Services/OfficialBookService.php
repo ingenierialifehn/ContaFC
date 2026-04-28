@@ -12,8 +12,8 @@ use PDO;
  */
 class OfficialBookService
 {
-    private PDO $db;
-    private bool $asientosTieneFecha;
+    private $db;
+    private $asientosTieneFecha;
 
     public function __construct()
     {
@@ -21,10 +21,7 @@ class OfficialBookService
         $this->asientosTieneFecha = $this->tableHasColumn('asientos', 'fecha');
     }
 
-    /**
-     * Obtiene el Libro Diario para un periodo determinado
-     */
-    public function getJournal(int $empresaId, int $periodoId): array
+    public function getJournal($empresaId, $periodoId)
     {
         $sql = "SELECT c.numero, c.fecha, c.observaciones as cab_obs, tc.codigo as tipo_doc,
                        a.linea, p.codigo as cuenta_cod, p.nombre as cuenta_nom,
@@ -43,10 +40,7 @@ class OfficialBookService
         return $stmt->fetchAll();
     }
 
-    /**
-     * Obtiene el Libro Mayor para un periodo determinado
-     */
-    public function getLedger(int $empresaId, int $periodoId): array
+    public function getLedger($empresaId, $periodoId)
     {
         $periodo = $this->db->query("SELECT * FROM periodos WHERE id = $periodoId")->fetch();
         $mesAnterior = $periodo['mes'] - 1;
@@ -76,24 +70,21 @@ class OfficialBookService
         return $stmt->fetchAll();
     }
 
-    /**
-     * Obtiene el Balance General Comparativo para un ano y el anterior con jerarquia.
-     */
-    public function getComparativeBalance(int $empresaId, int $year, ?int $proyectoId = null): array
+    public function getComparativeBalance($empresaId, $year, $proyectoId = null)
     {
         $prevYear = $year - 1;
 
         $stmt = $this->db->prepare(
-            "SELECT id, codigo, nombre, naturaleza, nivel, tipo_cuenta
+            "SELECT MIN(id) as id, codigo, nombre, naturaleza, nivel, tipo_cuenta
              FROM puc_cuentas
              WHERE empresa_id = :eid
                AND activa = 1
+             GROUP BY codigo, nombre, naturaleza, nivel, tipo_cuenta
              ORDER BY codigo ASC"
         );
         $stmt->execute([':eid' => $empresaId]);
         $rawAccounts = $stmt->fetchAll();
 
-        // Clasificación estricta por primer dígito
         $accounts = [];
         $incomeExpensesBalancePrev = 0.0;
         $incomeExpensesBalanceCurr = 0.0;
@@ -101,14 +92,13 @@ class OfficialBookService
         foreach ($rawAccounts as $acc) {
             $d1 = substr((string)$acc['codigo'], 0, 1);
             if ($d1 === '1') {
-                $acc['tipo_cuenta'] = 'A'; // Activo
+                $acc['tipo_cuenta'] = 'A';
             } elseif ($d1 === '2') {
-                $acc['tipo_cuenta'] = 'P'; // Pasivo
+                $acc['tipo_cuenta'] = 'P';
             } elseif ($d1 === '3') {
-                $acc['tipo_cuenta'] = 'R'; // Patrimonio/Reserva
+                $acc['tipo_cuenta'] = 'R';
             } elseif (in_array($d1, ['4','5','6','7'], true)) {
-                // Estas cuentas NO van directo al balance, se usan para calcular la UTILIDAD
-                $acc['tipo_cuenta'] = 'G'; // Grupo de Resultados
+                $acc['tipo_cuenta'] = 'G';
             } else {
                 continue;
             }
@@ -118,39 +108,37 @@ class OfficialBookService
         $saldosPrev = $this->getBalanceSnapshotByAccount($empresaId, $prevYear, $proyectoId);
         $saldosCurr = $this->getBalanceSnapshotByAccount($empresaId, $year, $proyectoId);
 
-        // Calcular utilidad neta antes de procesar filas
         foreach ($accounts as $acc) {
             if ($acc['tipo_cuenta'] === 'G' && $acc['nivel'] >= 4) {
-                // Solo sumamos hojas para evitar duplicados
                 $hasChildren = false;
                 foreach ($accounts as $child) {
-                    if ($child['id'] !== $acc['id'] && str_starts_with((string)$child['codigo'], (string)$acc['codigo'])) {
+                    if ($child['id'] !== $acc['id'] && strpos((string)$child['codigo'], (string)$acc['codigo']) === 0) {
                         $hasChildren = true;
                         break;
                     }
                 }
                 if (!$hasChildren) {
-                    $incomeExpensesBalancePrev += ($saldosPrev[$acc['codigo']] ?? 0.0);
-                    $incomeExpensesBalanceCurr += ($saldosCurr[$acc['codigo']] ?? 0.0);
+                    $incomeExpensesBalancePrev += (isset($saldosPrev[$acc['codigo']]) ? $saldosPrev[$acc['codigo']] : 0.0);
+                    $incomeExpensesBalanceCurr += (isset($saldosCurr[$acc['codigo']]) ? $saldosCurr[$acc['codigo']] : 0.0);
                 }
             }
         }
 
         $rows = [];
         foreach ($accounts as $account) {
-            if ($account['tipo_cuenta'] === 'G') continue; // Omitir ingresos/gastos del cuerpo del balance
+            if ($account['tipo_cuenta'] === 'G') continue;
             $codigo = (string) $account['codigo'];
             $saldoAnterior = 0.0;
             $saldoActual = 0.0;
 
             foreach ($saldosPrev as $childCode => $childSaldo) {
-                if (str_starts_with((string) $childCode, (string) $codigo)) {
+                if (strpos((string) $childCode, (string) $codigo) === 0) {
                     $saldoAnterior += (float) $childSaldo;
                 }
             }
 
             foreach ($saldosCurr as $childCode => $childSaldo) {
-                if (str_starts_with((string) $childCode, (string) $codigo)) {
+                if (strpos((string) $childCode, (string) $codigo) === 0) {
                     $saldoActual += (float) $childSaldo;
                 }
             }
@@ -181,9 +169,7 @@ class OfficialBookService
             ];
         }
 
-        // Agregar fila virtual de Utilidad/Pérdida al final de la sección de Patrimonio
-        // Agregar fila virtual de Utilidad/Pérdida al final de la sección de Patrimonio
-        $utilPrev = $incomeExpensesBalancePrev * -1; // Invertimos para que sea crédito (positivo = utilidad)
+        $utilPrev = $incomeExpensesBalancePrev * -1;
         $utilCurr = $incomeExpensesBalanceCurr * -1;
         
         if (abs($utilPrev) > 0.001 || abs($utilCurr) > 0.001) {
@@ -204,40 +190,44 @@ class OfficialBookService
         return $rows;
     }
 
-    /**
-     * Obtiene un corte acumulado por cuenta hasta el ano indicado.
-     */
-    private function getBalanceSnapshotByAccount(int $empresaId, int $year, ?int $proyectoId = null): array
+    private function getBalanceSnapshotByAccount($empresaId, $year, $proyectoId = null)
     {
-        // Usar c.fecha como fecha autoritativa del periodo.
-        // COALESCE(a.fecha, c.fecha) causa que asientos importados con a.fecha=2023
-        // pero cuyo comprobante tiene c.fecha=2024/2025 aparezcan en balances históricos.
-        $fechaExpr = 'c.fecha';
         $proyFilter = $proyectoId ? 'AND a.proyecto_id = :proy' : '';
 
-        $sql = "SELECT
+        $sql = "SELECT 
+                    p.id as cuenta_id,
                     p.codigo,
+                    p.nombre,
+                    p.naturaleza,
+                    p.nivel,
+                    p.tipo_cuenta,
                     COALESCE(SUM(
-                        CASE
-                            WHEN c.id IS NOT NULL THEN (a.debito - a.credito)
-                            ELSE 0
+                        CASE 
+                            WHEN c.id IS NOT NULL AND c.id NOT IN (10631, 10083)
+                            THEN (a.debito - a.credito)
+                            ELSE 0 
                         END
-                    ), 0) AS saldo_neto
+                    ), 0) AS saldo_operativo,
+                    COALESCE(SUM(
+                        CASE 
+                            WHEN c.id IS NOT NULL AND c.id IN (10631, 10083)
+                            THEN (a.debito - a.credito)
+                            ELSE 0 
+                        END
+                    ), 0) AS saldo_migracion
                 FROM puc_cuentas p
-                LEFT JOIN asientos a
-                    ON a.cuenta_id = p.id
+                LEFT JOIN asientos a 
+                    ON a.cuenta_id = p.id 
                    AND a.empresa_id = p.empresa_id
-                   $proyFilter
-                LEFT JOIN comprobantes c
-                    ON c.id = a.comprobante_id
+                $proyFilter
+                LEFT JOIN comprobantes c 
+                    ON c.id = a.comprobante_id 
                    AND c.empresa_id = p.empresa_id
                    AND c.estado = 'registrado'
-                   AND YEAR($fechaExpr) <= :year
+                   AND YEAR(c.fecha) <= :year
                 WHERE p.empresa_id = :eid
                   AND p.activa = 1
-                  AND SUBSTR(p.codigo, 1, 1) IN ('1','2','3','4','5','6')
-                GROUP BY p.id, p.codigo
-                HAVING ABS(saldo_neto) > 0.001
+                GROUP BY p.id, p.codigo, p.nombre, p.naturaleza, p.nivel, p.tipo_cuenta
                 ORDER BY p.codigo ASC";
 
         $params = [
@@ -249,27 +239,32 @@ class OfficialBookService
         }
 
         $stmt = $this->db->prepare($sql);
-        
-        // DEBUG LOG SQL
-        $logParams = json_encode($params);
-        file_put_contents(__DIR__ . '/../../scratch/sql_debug.log', date('Y-m-d H:i:s') . " - SQL: $sql | Params: $logParams\n", FILE_APPEND);
-
         $stmt->execute($params);
+        $rawRows = $stmt->fetchAll();
 
         $balances = [];
-        foreach ($stmt->fetchAll() as $row) {
-            $balances[(string) $row['codigo']] = (float) $row['saldo_neto'];
+        foreach ($rawRows as $row) {
+            $saldoOperativo = (float)$row['saldo_operativo'];
+            $saldoMigracion = (float)$row['saldo_migracion'];
+
+            if (abs($saldoMigracion) > 0.001) {
+                if (abs($saldoOperativo - $saldoMigracion) < 0.1) {
+                    $saldoFinal = $saldoOperativo;
+                } else {
+                    $saldoFinal = $saldoMigracion;
+                }
+            } else {
+                $saldoFinal = $saldoOperativo;
+            }
+
+            $balances[(string) $row['codigo']] = $saldoFinal;
         }
 
         return $balances;
     }
 
-    /**
-     * Obtiene el Estado de Resultados para un año específico con jerarquía completa.
-     */
-    public function getIncomeStatement(int $empresaId, int $year, ?int $proyectoId = null): array
+    public function getIncomeStatement($empresaId, $year, $proyectoId = null)
     {
-        // 1. Obtener todas las cuentas de resultados (4,5,6,7)
         $stmt = $this->db->prepare(
             "SELECT id, codigo, nombre, naturaleza, nivel, tipo_cuenta
              FROM puc_cuentas
@@ -281,7 +276,6 @@ class OfficialBookService
         $stmt->execute([':eid' => $empresaId]);
         $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 2. Obtener movimientos netos del año
         $proyFilter = $proyectoId ? 'AND a.proyecto_id = :proy' : '';
         $sqlMovs = "SELECT p.codigo, SUM(a.debito - a.credito) as neto
                     FROM asientos a
@@ -307,23 +301,19 @@ class OfficialBookService
             $saldosNetos[$sm['codigo']] = (float)$sm['neto'];
         }
 
-        // 3. Procesar saldos y jerarquía
         $rows = [];
         foreach ($accounts as $acc) {
             $codigo = (string)$acc['codigo'];
             $saldoTotal = 0.0;
 
-            // 1. Sumar todos los saldos de hijos (o el propio si es hoja)
             foreach ($saldosNetos as $cCode => $cNeto) {
-                if (str_starts_with((string)$cCode, (string)$codigo)) {
+                if (strpos((string)$cCode, (string)$codigo) === 0) {
                     $saldoTotal += $cNeto;
                 }
             }
 
-            // 2. Omitir cuentas sin saldo para limpiar el reporte
             if (abs($saldoTotal) < 0.01) continue;
 
-            // 3. Ajustar por naturaleza para que los saldos se vean como valores positivos en el reporte
             if ($acc['naturaleza'] === 'C') {
                 $saldoTotal *= -1;
             } else {
@@ -344,7 +334,7 @@ class OfficialBookService
         return $rows;
     }
 
-    private function tableHasColumn(string $table, string $column): bool
+    private function tableHasColumn($table, $column)
     {
         $stmt = $this->db->prepare(
             "SELECT 1
@@ -362,10 +352,7 @@ class OfficialBookService
         return (bool) $stmt->fetchColumn();
     }
 
-    /**
-     * Obtiene el Libro de Inventarios y Balances para un ano determinado
-     */
-    public function getInventoryBalances(int $empresaId, int $year): array
+    public function getInventoryBalances($empresaId, $year)
     {
         $sql = "SELECT p.id as cuenta_id, p.codigo, p.nombre, p.naturaleza, p.nivel, p.tipo_cuenta,
                        (SELECT COALESCE(SUM(a2.debito - a2.credito), 0) FROM asientos a2
@@ -386,10 +373,7 @@ class OfficialBookService
         return $stmt->fetchAll();
     }
 
-    /**
-     * Retorna y actualiza el folio de un libro oficial
-     */
-    public function getFolioState(int $empresaId, string $tipo): array
+    public function getFolioState($empresaId, $tipo)
     {
         $stmt = $this->db->prepare("SELECT * FROM libros_folios WHERE empresa_id = ? AND libro_tipo = ?");
         $stmt->execute([$empresaId, $tipo]);

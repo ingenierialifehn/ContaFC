@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -24,11 +24,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // ─── Autoloader PSR-4 ─────────────────────────────────────────────────────
-spl_autoload_register(function (string $class): void {
+spl_autoload_register(function ($class) {
     $prefix = 'ContaFC\\';
     $base   = __DIR__ . '/src/';
 
-    if (!str_starts_with($class, $prefix)) return;
+    if (strpos($class, $prefix) !== 0) return;
 
     $relative = substr($class, strlen($prefix));
     $file     = $base . str_replace('\\', DIRECTORY_SEPARATOR, $relative) . '.php';

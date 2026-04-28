@@ -317,3 +317,8 @@
 2026-04-26 11:40:51 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
 2026-04-26 11:47:44 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
 2026-04-26 12:34:12 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-26 13:23:04 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-26, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-27 07:43:29 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-27, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-27 15:17:40 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-27, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-27 15:46:52 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-27, estado=registrado | Count Comp: 0 | Count Asientos: 0
+2026-04-28 09:14:59 - WHERE: (Strict Filter) | Params: d=2026-04-01, h=2026-04-28, estado=registrado | Count Comp: 0 | Count Asientos: 0

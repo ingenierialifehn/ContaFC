@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 
 /**
  * Bootstrap – punto de entrada para todas las páginas web.
@@ -11,8 +11,8 @@ declare(strict_types=1);
 if (file_exists(__DIR__ . '/../.env')) {
     $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) continue;
-        if (str_contains($line, '=')) {
+        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
             [$key, $value] = explode('=', $line, 2);
             $_ENV[trim($key)] = trim($value);
             putenv(trim($key) . '=' . trim($value));
@@ -21,7 +21,7 @@ if (file_exists(__DIR__ . '/../.env')) {
 }
 
 // ─── Timezone ────────────────────────────────────────────────────────────
-date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'America/Bogota');
+date_default_timezone_set(isset($_ENV['APP_TIMEZONE']) ? $_ENV['APP_TIMEZONE'] : 'America/Bogota');
 
 // ─── Sesión segura ────────────────────────────────────────────────────────
 if (session_status() === PHP_SESSION_NONE) {
@@ -35,12 +35,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ─── Autoload ─────────────────────────────────────────────────────────────
+// ─── Autoloader PSR-4 ─────────────────────────────────────────────────────
 spl_autoload_register(function (string $class): void {
     $prefix = 'ContaFC\\';
     $base   = __DIR__ . '/';
 
-    if (!str_starts_with($class, $prefix)) return;
+    if (strpos($class, $prefix) !== 0) return;
 
     $relative = substr($class, strlen($prefix));
     $file     = $base . str_replace('\\', DIRECTORY_SEPARATOR, $relative) . '.php';

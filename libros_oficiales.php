@@ -243,7 +243,7 @@ $maxAnio = !empty($periodos) ? $periodos[0]['anio'] : date('Y');
                                     $periodosYears = $stmtYears->fetchAll();
                                     if (!empty($balanceYears)) {
                                         $periodosYears = array_map(
-                                            static fn (int $anio): array => ['anio' => $anio],
+                                            function ($anio) { return ['anio' => $anio]; },
                                             $balanceYears
                                         );
                                     }

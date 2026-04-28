@@ -34,11 +34,11 @@ function fetchGruposNivel2($db, int $eid) {
     return $grupos;
 }
 
-$tipo = $_GET['tipo'] ?? 'DIARIO';
-$pid = (int) ($_GET['pid'] ?? 0);
-$folio = (int) ($_GET['folio'] ?? 1);
+$tipo = isset($_GET['tipo']) ? $_GET['tipo'] : 'DIARIO';
+$pid = (int) (isset($_GET['pid']) ? $_GET['pid'] : 0);
+$folio = (int) (isset($_GET['folio']) ? $_GET['folio'] : 1);
 $eid = Auth::empresaId();
-$subtipo = $_GET['subtipo'] ?? 'auxiliar';
+$subtipo = isset($_GET['subtipo']) ? $_GET['subtipo'] : 'auxiliar';
 
 $service = new OfficialBookService();
 $db = Database::getInstance()->getPdo();
@@ -63,8 +63,8 @@ if ($tipo === 'DIARIO') {
         $proyecto = $stmtProyecto->fetch();
 
         if ($proyecto) {
-            $codigoProyecto = strtolower(trim((string) ($proyecto['codigo'] ?? '')));
-            $nombreProyecto = strtolower(trim((string) ($proyecto['nombre'] ?? '')));
+            $codigoProyecto = strtolower(trim((string) (isset($proyecto['codigo']) ? $proyecto['codigo'] : '')));
+            $nombreProyecto = strtolower(trim((string) (isset($proyecto['nombre']) ? $proyecto['nombre'] : '')));
 
             if (in_array($codigoProyecto, ['gen', 'general'], true) || in_array($nombreProyecto, ['general', 'todos', 'todas'], true)) {
                 $proyecto_id = null;
@@ -91,8 +91,8 @@ if ($tipo === 'DIARIO') {
         $stmtP = Database::getInstance()->getPdo()->prepare("SELECT nombre, logo_path FROM proyectos WHERE id = ?");
         $stmtP->execute([$proyecto_id]);
         $proyRow = $stmtP->fetch();
-        $projectName = $proyRow['nombre'] ?? '';
-        $projectLogo = $proyRow['logo_path'] ?? null;
+        $projectName = isset($proyRow['nombre']) ? $proyRow['nombre'] : '';
+        $projectLogo = isset($proyRow['logo_path']) ? $proyRow['logo_path'] : null;
     }
 } elseif ($tipo === 'RESULTADOS') {
     $proyecto_id = isset($_GET['proyecto_id']) && $_GET['proyecto_id'] !== '' ? (int) $_GET['proyecto_id'] : null;
@@ -107,8 +107,8 @@ if ($tipo === 'DIARIO') {
         $stmtP = Database::getInstance()->getPdo()->prepare("SELECT nombre, logo_path FROM proyectos WHERE id = ?");
         $stmtP->execute([$proyecto_id]);
         $proyRow = $stmtP->fetch();
-        $projectName = $proyRow['nombre'] ?? '';
-        $projectLogo = $proyRow['logo_path'] ?? null;
+        $projectName = isset($proyRow['nombre']) ? $proyRow['nombre'] : '';
+        $projectLogo = isset($proyRow['logo_path']) ? $proyRow['logo_path'] : null;
     }
 } else {
     die("Tipo de libro no soportado aún.");
@@ -307,66 +307,60 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
 
     <div class="page">
         <div class="folio">Pág. <?= $folio ?></div>
-
-        <div class="header" style="margin-bottom: 40px; border-bottom: 2px solid #1e293b; padding-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                <!-- Logo Empresa (Izquierda) -->
-                <div style="flex: 1; text-align: left;">
+        <div class="header" style="margin-bottom: 40px; border-bottom: 3px solid #000; padding-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="width: 300px; text-align: left;">
                     <?php if (!empty($empresa['logo_path'])): ?>
-                        <img src="<?= BASE_URL ?>/<?= $empresa['logo_path'] ?>" style="max-height: 70px; max-width: 180px; object-fit: contain;">
+                        <img src="<?= BASE_URL . '/' . htmlspecialchars($empresa['logo_path']) ?>" style="max-height: 80px; width: auto;">
                     <?php endif; ?>
-                    <div style="margin-top: 8px;">
-                        <p style="font-size: 11px; font-weight: 800; margin: 0; color: #1e293b;"><?= htmlspecialchars($empresa['nombre']) ?></p>
-                        <p style="font-size: 9px; color: #64748b; margin: 0;">Nit: <?= htmlspecialchars($empresa['nit'] ?? '—') ?></p>
-                    </div>
                 </div>
-
-                <!-- Título Central -->
-                <div style="flex: 2; text-align: center;">
-                    <h1 style="font-size: 26px; margin: 0; color: #1e293b; letter-spacing: -1px;"><?= $tipo === 'RESULTADOS' ? 'ESTADO DE RESULTADOS' : 'BALANCE GENERAL' ?></h1>
-                    <p style="font-size: 15px; font-weight: 800; color: #475569; margin: 10px 0; text-transform: uppercase;">
-                        <?php if ($tipo === 'RESULTADOS'): ?>
-                            Del 1 de Diciembre de <?= $year - 1 ?> al 31 de Diciembre de <?= $year ?>
-                        <?php else: ?>
-                            Al 31 de Diciembre de <?= $year ?>
-                        <?php endif; ?>
-                    </p>
-                </div>
-
-                <!-- Logo Proyecto (Derecha) -->
-                <div style="flex: 1; text-align: right;">
+                <div style="width: 300px; text-align: right;">
                     <?php if (!empty($projectLogo)): ?>
-                        <img src="<?= BASE_URL ?>/<?= $projectLogo ?>" style="max-height: 70px; max-width: 180px; object-fit: contain;">
+                        <img src="<?= BASE_URL . '/' . htmlspecialchars($projectLogo) ?>" style="max-height: 80px; width: auto;">
                     <?php endif; ?>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: -20px;">
+                    <h1 style="font-size: 20px; margin: 0; color: #000; font-weight: 900; text-transform: uppercase;"><?= htmlspecialchars(strtoupper(isset($empresa['nombre']) ? $empresa['nombre'] : 'EMPRESA')) ?></h1>
+                    <p style="font-size: 13px; color: #000; margin: 3px 0; font-weight: 700;">Nit: <?= htmlspecialchars(isset($empresa['nit']) ? $empresa['nit'] : '—') ?></p>
+                <div style="margin-top: 10px;">
+                    <h2 style="font-size: 18px; margin: 0; color: #000; font-weight: 800; text-transform: uppercase;">BALANCE GENERAL</h2>
+                    <p style="font-size: 14px; font-weight: 700; color: #000; margin: 5px 0;">Al 31 de Diciembre de <?= $year ?></p>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 10px; font-weight: 700; color: #000; border-top: 1px solid #eee; padding-top: 5px;">
+                <div style="text-align: left;">
+                    <span>Empresa: <?= htmlspecialchars((string)(isset($empresa['id']) ? $empresa['id'] : '1')) ?></span>
+                    <span style="margin-left: 20px;">Destino: Todos</span>
+                </div>
+                <div style="text-align: right;">
                     <?php if ($projectName !== ""): ?>
-                        <div style="margin-top: 8px;">
-                            <p style="font-size: 9px; font-weight: 800; color: #0369a1; margin: 0; text-transform: uppercase;">Proyecto:</p>
-                            <p style="font-size: 10px; font-weight: 700; color: #1e293b; margin: 0;"><?= htmlspecialchars($projectName) ?></p>
-                        </div>
+                        <span>Proyecto: <?= htmlspecialchars($projectName) ?></span>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
 
         <?php if ($tipo === 'INVENTARIOS' && $subtipo === 'auxiliar'): ?>
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 10px;">
 
                 <table style="width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif;">
                     <thead>
                         <tr style="border-bottom: 1px solid #000;">
-                            <th style="text-align: left; padding: 8px 0; font-size: 12px; width: 12%;">CÓDIGO</th>
-                            <th style="text-align: left; padding: 8px 0; font-size: 12px; width: 38%;">NOMBRE DE LA CUENTA</th>
-                            <th style="text-align: right; padding: 8px 0; font-size: 12px; width: 15%;">PERIODO ANTERIOR</th>
-                            <th style="text-align: right; padding: 8px 0; font-size: 12px; width: 15%;">HASTA HOY</th>
-                            <th style="text-align: right; padding: 8px 0; font-size: 12px; width: 12%;">DIFERENCIA</th>
-                            <th style="text-align: right; padding: 8px 0; font-size: 12px; width: 8%;">%</th>
+                            <th style="text-align: left; padding: 10px 0; font-size: 11px; width: 10%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">CÓDIGO</th>
+                            <th style="text-align: left; padding: 10px 0; font-size: 11px; width: 34%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">CUENTA</th>
+                            <th style="text-align: right; padding: 10px 0; font-size: 11px; width: 16%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">PERIODO ANTERIOR</th>
+                            <th style="text-align: right; padding: 10px 0; font-size: 11px; width: 16%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">HASTA HOY</th>
+                            <th style="text-align: right; padding: 10px 0; font-size: 11px; width: 16%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">DIFERENCIA</th>
+                            <th style="text-align: right; padding: 10px 0; font-size: 11px; width: 8%; background: none; color: #000; border: none; border-bottom: 1px solid #000;">%</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
                         // ── Pre-paso: mapa de nombres para prefijos de 2 dígitos
-                        // Prioridad: consulta directa al PUC > cuentas en $data
-                        $grupoNombres = $gruposNivel2DB ?? [];
+                        $grupoNombres = isset($gruposNivel2DB) ? $gruposNivel2DB : array();
                         foreach ($data as $r2) {
                             if (strlen((string)$r2['codigo']) === 2 && !isset($grupoNombres[(string)$r2['codigo']])) {
                                 $grupoNombres[(string)$r2['codigo']] = strtoupper($r2['nombre']);
@@ -390,7 +384,6 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                             'A' => 'ACTIVOS', 
                             'P' => 'PASIVOS', 
                             'R' => 'PATRIMONIO Y CAPITAL',
-                            'O' => 'RESULTADOS (OTROS)'
                         ];
                         $lastType    = null;
                         $currPrefix2 = null;
@@ -398,18 +391,18 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                         $grupoSaldos = ['prev' => 0, 'actual' => 0, 'diff' => 0];
 
                         // Closure para emitir fila TOTAL GRUPO
-                        $emitTotalGrupo = function() use (&$currGrupoNombre, &$grupoSaldos): void {
+                        $emitTotalGrupo = function() use (&$currGrupoNombre, &$grupoSaldos) {
                             echo '<tr>';
-                            echo '<td colspan="2" style="padding:4px 0 4px 20px;font-weight:800;font-size:11px;">TOTAL '
+                            echo '<td colspan="2" style="padding:4px 0 4px 10px;font-weight:800;font-size:10px;">TOTAL '
                                  . htmlspecialchars($currGrupoNombre) . '</td>';
-                            echo '<td style="text-align:right;border-top:1px solid #94a3b8;font-weight:800;font-size:11px;">'
+                            echo '<td style="text-align:right;border-top:1px solid #000;font-weight:800;font-size:10px;">'
                                  . number_format($grupoSaldos['prev'], 2) . '</td>';
-                            echo '<td style="text-align:right;border-top:1px solid #94a3b8;font-weight:800;font-size:11px;">'
+                            echo '<td style="text-align:right;border-top:1px solid #000;font-weight:800;font-size:10px;">'
                                  . number_format($grupoSaldos['actual'], 2) . '</td>';
-                            echo '<td style="text-align:right;border-top:1px solid #94a3b8;font-weight:800;font-size:11px;">'
+                            echo '<td style="text-align:right;border-top:1px solid #000;font-weight:800;font-size:10px;">'
                                  . number_format($grupoSaldos['diff'], 2) . '</td>';
                             echo '<td></td></tr>';
-                            echo '<tr style="height:10px;"></tr>';
+                            echo '<tr style="height:5px;"></tr>';
                         };
 
                         foreach ($detalle as $r):
@@ -421,10 +414,9 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                             $prefix2    = substr($codigo, 0, 2);
 
                             // Acumular en totales globales
-                            // Para evitar doble conteo, solo sumamos las cuentas "hoja" (las que no tienen hijos en el set de datos)
                             $isLeaf = true;
                             foreach ($detalle as $child) {
-                                if ($child['codigo'] !== $r['codigo'] && str_starts_with($child['codigo'], $r['codigo'])) {
+                                if ($child['codigo'] !== $r['codigo'] && strpos((string)$child['codigo'], (string)$r['codigo']) === 0) {
                                     $isLeaf = false;
                                     break;
                                 }
@@ -434,7 +426,6 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                                 $sumasPrev[$tipoCuenta] += $saldoPrev;
                                 $sumas[$tipoCuenta]     += $saldo;
                             }
-                            $sumasDiff[$tipoCuenta] += $diff;
 
                             // ── Cambio de sección (Activos → Pasivos → Patrimonio)
                             if ($lastType !== $tipoCuenta) {
@@ -444,9 +435,9 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                                 }
                                 $lastType = $tipoCuenta;
                                 ?>
-                                <tr style="background:#f8fafc;">
-                                    <td style="font-weight:950;font-size:15px;padding:25px 0 10px 0;"><?= substr($codigo, 0, 1) ?></td>
-                                    <td style="font-weight:950;font-size:15px;padding:25px 0 10px 0;"><?= $sections[$tipoCuenta] ?></td>
+                                <tr>
+                                    <td style="font-weight:900;font-size:12px;padding:20px 0 10px 0;"><?= substr($codigo, 0, 1) ?></td>
+                                    <td style="font-weight:900;font-size:12px;padding:20px 0 10px 0;"><?= $sections[$tipoCuenta] ?></td>
                                     <td colspan="4"></td>
                                 </tr>
                                 <?php
@@ -458,12 +449,12 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                                     $emitTotalGrupo();
                                 }
                                 $currPrefix2 = $prefix2;
-                                $currGrupoNombre = $grupoNombres[$prefix2] ?? $prefix2;
+                                $currGrupoNombre = isset($grupoNombres[$prefix2]) ? $grupoNombres[$prefix2] : $prefix2;
                                 $grupoSaldos = ['prev' => 0, 'actual' => 0, 'diff' => 0];
                                 ?>
                                 <tr>
-                                    <td style="font-weight:800;font-size:11px;padding:8px 0 4px 15px;color:#1e293b;"><?= htmlspecialchars($prefix2) ?></td>
-                                    <td style="font-weight:800;font-size:11px;padding:8px 0 4px 15px;color:#1e293b;"><?= htmlspecialchars($currGrupoNombre) ?></td>
+                                    <td style="font-weight:800;font-size:10px;padding:5px 0 2px 10px;"><?= htmlspecialchars($prefix2) ?></td>
+                                    <td style="font-weight:800;font-size:10px;padding:5px 0 2px 10px;"><?= htmlspecialchars($currGrupoNombre) ?></td>
                                     <td colspan="4"></td>
                                 </tr>
                                 <?php
@@ -474,13 +465,13 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                             $grupoSaldos['actual'] += $saldo;
                             $grupoSaldos['diff']   += $diff;
                             ?>
-                            <tr style="font-size:10px;color:#334155;">
-                                <td style="padding:2px 0 2px 30px;"><?= htmlspecialchars($codigo) ?></td>
-                                <td><?= htmlspecialchars($r['nombre']) ?></td>
+                            <tr style="font-size:10px; color: #000;">
+                                <td style="padding:1px 0;"><?= htmlspecialchars($codigo) ?></td>
+                                <td style="padding-left: 15px;"><?= htmlspecialchars($r['nombre']) ?></td>
                                 <td style="text-align:right;"><?= number_format($saldoPrev, 2) ?></td>
                                 <td style="text-align:right;"><?= number_format($saldo, 2) ?></td>
                                 <td style="text-align:right;"><?= number_format($diff, 2) ?></td>
-                                <td style="text-align:right;font-size:9px;"><?= number_format((float)$r['porcentaje'], 1) ?>%</td>
+                                <td style="text-align:right;font-size:9px;"><?= number_format((float)$r['porcentaje'], 2) ?></td>
                             </tr>
                         <?php
                         endforeach;
@@ -491,66 +482,58 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                         }
                         ?>
 
-
-                        <tr style="height: 40px;"></tr>
-                        <tr style="font-weight: 900; font-size: 14px; border-top: 2px solid #000;">
-                            <td colspan="2" style="padding: 10px 0;">TOTAL ACTIVOS</td>
-                            <td style="text-align: right; border-bottom: 2px solid #000;"><?= number_format($sumasPrev['A'], 2) ?></td>
-                            <td style="text-align: right; border-bottom: 2px solid #000;"><?= number_format($sumas['A'], 2) ?></td>
-                            <td style="text-align: right; border-bottom: 2px solid #000;"><?= number_format($sumasDiff['A'], 2) ?></td>
+                        <tr style="height: 10px;"></tr>
+                        <tr style="font-weight: 900; font-size: 11px;">
+                            <td colspan="2" style="padding: 5px 0;">TOTAL ACTIVOS</td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasPrev['A'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['A'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['A'] - $sumasPrev['A'], 2) ?></td>
                             <td></td>
                         </tr>
 
                         <tr style="height: 20px;"></tr>
-                        <tr style="font-weight: 900; font-size: 13px;">
+                        <tr style="font-weight: 900; font-size: 11px;">
                             <td colspan="2">TOTAL PASIVOS</td>
                             <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasPrev['P'], 2) ?></td>
                             <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['P'], 2) ?></td>
-                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasDiff['P'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['P'] - $sumasPrev['P'], 2) ?></td>
                             <td></td>
                         </tr>
 
-                        <tr style="font-weight: 900; font-size: 13px;">
+                        <tr style="font-weight: 900; font-size: 11px;">
                             <td colspan="2">TOTAL PATRIMONIO Y CAPITAL</td>
                             <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasPrev['R'], 2) ?></td>
                             <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['R'], 2) ?></td>
-                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasDiff['R'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['R'] - $sumasPrev['R'], 2) ?></td>
                             <td></td>
                         </tr>
 
-                        <tr style="height: 30px;"></tr>
-                        <tr style="height: 30px;"></tr>
-                        
-                        <tr style="height: 30px;"></tr>
-                        <tr style="font-weight: 950; font-size: 14px; color: #2563eb;">
-                            <td colspan="2" style="padding: 12px 0; text-decoration: underline; border-top: 3px double #000;">TOTAL PASIVO Y PATRIMONIO</td>
-                            <td style="text-align: right; border-top: 3px double #000;"><?= number_format($sumasPrev['P'] + $sumasPrev['R'], 2) ?></td>
-                            <td style="text-align: right; border-top: 3px double #000;"><?= number_format($sumas['P'] + $sumas['R'], 2) ?></td>
-                            <td style="text-align: right; border-top: 3px double #000;"><?= number_format($sumasDiff['P'] + $sumasDiff['R'], 2) ?></td>
+                        <tr style="height: 20px;"></tr>
+                        <tr style="font-weight: 950; font-size: 12px; color: #000;">
+                            <td colspan="2" style="padding: 10px 0; border-top: 1px solid #000;">TOTAL PASIVO Y PATRIMONIO</td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumasPrev['P'] + $sumasPrev['R'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format($sumas['P'] + $sumas['R'], 2) ?></td>
+                            <td style="text-align: right; border-top: 1px solid #000;"><?= number_format(($sumas['P'] + $sumas['R']) - ($sumasPrev['P'] + $sumasPrev['R']), 2) ?></td>
                             <td></td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div style="margin-top: 80px; width: 100%;">
-                    <div style="display: flex; justify-content: space-around; margin-bottom: 60px;">
-                        <div style="text-align: left; width: 250px; border-top: 1px solid #94a3b8; padding-top: 10px;">
-                            <p style="font-weight: 800; font-size: 12px;">Contador</p>
-                            <p style="font-size: 10px; color: #475569;">TP</p>
-                            <p style="font-size: 10px; color: #475569;">C.C.</p>
-                        </div>
-                        <div style="text-align: left; width: 250px; border-top: 1px solid #94a3b8; padding-top: 10px;">
-                            <p style="font-weight: 800; font-size: 12px;">Revisor</p>
-                            <p style="font-size: 10px; color: #475569;">TP</p>
-                            <p style="font-size: 10px; color: #475569;">C.C.</p>
-                        </div>
+                <div style="margin-top: 80px; width: 100%; display: flex; justify-content: space-around; align-items: flex-start; padding: 0 10px;">
+                    <div style="text-align: left; width: 30%; border-top: 1px solid #000; padding-top: 5px;">
+                        <p style="font-weight: 800; font-size: 10px; margin: 0; text-transform: uppercase;">Contador</p>
+                        <p style="font-size: 8px; margin: 2px 0;">TP:</p>
+                        <p style="font-size: 8px; margin: 2px 0;">C.C.:</p>
                     </div>
-                    <div style="display: flex; justify-content: center;">
-                        <div style="text-align: left; width: 250px; border-top: 1px solid #94a3b8; padding-top: 10px;">
-                            <p style="font-weight: 800; font-size: 12px;">Gerente</p>
-                            <p style="font-size: 10px; color: #475569;">TP</p>
-                            <p style="font-size: 10px; color: #475569;">C.C.</p>
-                        </div>
+                    <div style="text-align: left; width: 30%; border-top: 1px solid #000; padding-top: 5px;">
+                        <p style="font-weight: 800; font-size: 10px; margin: 0; text-transform: uppercase;">Revisor Fiscal</p>
+                        <p style="font-size: 8px; margin: 2px 0;">TP:</p>
+                        <p style="font-size: 8px; margin: 2px 0;">C.C.:</p>
+                    </div>
+                    <div style="text-align: left; width: 30%; border-top: 1px solid #000; padding-top: 5px;">
+                        <p style="font-weight: 800; font-size: 10px; margin: 0; text-transform: uppercase;">Gerente General</p>
+                        <p style="font-size: 8px; margin: 2px 0;">TP:</p>
+                        <p style="font-size: 8px; margin: 2px 0;">C.C.:</p>
                     </div>
                 </div>
             </div>
@@ -575,7 +558,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                 // Verificar si es hoja para los totales
                 $isLeaf = true;
                 foreach ($detalle as $child) {
-                    if ($child['codigo'] !== $r['codigo'] && str_starts_with($child['codigo'], $r['codigo'])) {
+                    if ($child['codigo'] !== $r['codigo'] && strpos((string)$child['codigo'], (string)$r['codigo']) === 0) {
                         $isLeaf = false;
                         break;
                     }
@@ -591,7 +574,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
             }
 
             // Mapa de grupos para subtítulos
-            $grupoNombres = $gruposNivel2DB ?? [];
+            $grupoNombres = isset($gruposNivel2DB) ? $gruposNivel2DB : array();
             ?>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
@@ -607,7 +590,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                         $p2 = substr((string)$r['codigo'], 0, 2);
                         if ($currP2 !== $p2):
                             $currP2 = $p2;
-                            $gNom = $grupoNombres[$p2] ?? $p2;
+                            $gNom = isset($grupoNombres[$p2]) ? $grupoNombres[$p2] : $p2;
                     ?>
                         <div style="font-weight: 800; font-size: 10px; background: #f8fafc; padding: 6px 10px; margin-top: 8px; color: #475569; border-left: 3px solid #cbd5e1;">
                             <?= htmlspecialchars($p2) ?> – <?= htmlspecialchars($gNom) ?>
@@ -648,7 +631,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
 
                         if ($currP2 !== $p2):
                             $currP2 = $p2;
-                            $gNom = $grupoNombres[$p2] ?? $p2;
+                            $gNom = isset($grupoNombres[$p2]) ? $grupoNombres[$p2] : $p2;
                     ?>
                         <div style="font-weight: 800; font-size: 10px; background: #f8fafc; padding: 6px 10px; margin-top: 8px; color: #475569; border-left: 3px solid #cbd5e1;">
                             <?= htmlspecialchars($p2) ?> – <?= htmlspecialchars($gNom) ?>
@@ -780,20 +763,20 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                     $totalOtrosIng = 0;
                     
                     // Separar cuentas por bloques funcionales (Grupo completo para no perder datos)
-                    $ctaVentas = array_filter($data, fn($r) => str_starts_with($r['codigo'], '41'));
-                    $ctaCostos = array_filter($data, fn($r) => str_starts_with($r['codigo'], '6') || str_starts_with($r['codigo'], '7'));
-                    $ctaOtrosIng = array_filter($data, fn($r) => str_starts_with($r['codigo'], '4') && !str_starts_with($r['codigo'], '41'));
+                    $ctaVentas = array_filter($data, function($r) { return strpos($r['codigo'], '41') === 0; });
+                    $ctaCostos = array_filter($data, function($r) { return strpos($r['codigo'], '6') === 0 || strpos($r['codigo'], '7') === 0; });
+                    $ctaOtrosIng = array_filter($data, function($r) { return strpos($r['codigo'], '4') === 0 && strpos($r['codigo'], '41') !== 0; });
                     
-                    $ctaGastosVenta = array_filter($data, fn($r) => str_starts_with($r['codigo'], '51'));
-                    $ctaGastosAdmin = array_filter($data, fn($r) => str_starts_with($r['codigo'], '52') || str_starts_with($r['codigo'], '53'));
-                    $ctaGastosFinan = array_filter($data, fn($r) => str_starts_with($r['codigo'], '54') || (str_starts_with($r['codigo'], '5') && !in_array(substr($r['codigo'],0,2), ['51','52','53','54'])));
+                    $ctaGastosVenta = array_filter($data, function($r) { return strpos($r['codigo'], '51') === 0; });
+                    $ctaGastosAdmin = array_filter($data, function($r) { return strpos($r['codigo'], '52') === 0 || strpos($r['codigo'], '53') === 0; });
+                    $ctaGastosFinan = array_filter($data, function($r) { return strpos($r['codigo'], '54') === 0 || (strpos($r['codigo'], '5') === 0 && !in_array(substr($r['codigo'],0,2), ['51','52','53','54'])); });
                     
                     $getLeafs = function($set) {
                         $leafs = [];
                         foreach($set as $r) {
                             $isLeaf = true;
                             foreach($set as $child) {
-                                if ($child['codigo'] !== $r['codigo'] && str_starts_with((string)$child['codigo'], (string)$r['codigo'])) {
+                                if ($child['codigo'] !== $r['codigo'] && strpos((string)$child['codigo'], (string)$r['codigo']) === 0) {
                                     $isLeaf = false; break;
                                 }
                             }
@@ -920,7 +903,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
                     <?php 
                         $utilidadAntes = $ingresosNetos - $totalGastos;
                         // Buscar cuenta de impuesto si existe en el data (ej. 2601...)
-                        $ctaImp = array_filter($data, fn($r) => str_starts_with($r['codigo'], '26'));
+                        $ctaImp = array_filter($data, function($r) { return strpos($r['codigo'], '26') === 0; });
                         $taxValue = 0;
                         foreach($getLeafs($ctaImp) as $l) $taxValue += $l['saldo'];
                         
@@ -950,7 +933,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'excel') {
 
                     <!-- Utilidad del periodo (opcional según cuenta 36) -->
                     <?php 
-                        $ctaPer = array_filter($data, fn($r) => str_starts_with($r['codigo'], '36'));
+                        $ctaPer = array_filter($data, function($r) { return strpos($r['codigo'], '36') === 0; });
                         foreach($getLeafs($ctaPer) as $l):
                     ?>
                     <tr class="res-sub">
